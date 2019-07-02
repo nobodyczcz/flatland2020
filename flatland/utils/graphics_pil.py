@@ -106,6 +106,7 @@ class PILGL(GraphicsLayer):
         return self.ltAgentColors[iAgent % self.nAgentColors]
 
     def plot(self, gX, gY, color=None, linewidth=3, layer=0, opacity=255, **kwargs):
+        print("Plotting ", gX, gY)
         color = self.adaptColor(color)
         if len(color) == 3:
             color += (opacity,)
@@ -113,6 +114,7 @@ class PILGL(GraphicsLayer):
             color = color[:3] + (opacity,)
         gPoints = np.stack([array(gX), -array(gY)]).T * self.nPixCell
         gPoints = list(gPoints.ravel())
+        print(self.draws)
         self.draws[layer].line(gPoints, fill=color, width=self.linewidth)
 
     def scatter(self, gX, gY, color=None, marker="o", s=50, layer=0, opacity=255, *args, **kwargs):
@@ -563,13 +565,15 @@ class PILSVG(PILGL):
 
 def main2():
     gl = PILSVG(10, 10)
+    gl.open_window()
     for i in range(10):
         gl.beginFrame()
         gl.plot([3 + i, 4], [-4 - i, -5], color="r")
         gl.endFrame()
-        time.sleep(1)
+        gl.processEvents()
+        gl.show()
+        time.sleep(0.2)
         print(i)
-
 
 def main():
     gl = PILSVG(width=10, height=10)
@@ -581,4 +585,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    main2()
