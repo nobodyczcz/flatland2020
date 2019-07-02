@@ -575,6 +575,7 @@ def main2():
         time.sleep(0.2)
         print(i)
 
+
 def main():
     gl = PILSVG(width=10, height=10)
 
