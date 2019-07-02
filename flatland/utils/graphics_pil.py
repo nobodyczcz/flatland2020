@@ -247,9 +247,9 @@ class PILSVG(PILGL):
         self.lwAgents = []
         self.agents_prev = []
 
-        self.loadBuildingSVGs()
-        self.loadScenerySVGs()
-        self.loadRailSVGs()
+        self.loadBuildingPNGs()
+        self.loadSceneryPNGs()
+        self.loadRailPNGs()
         self.loadAgentPNGs()
 
     def is_raster(self):
@@ -276,7 +276,7 @@ class PILSVG(PILGL):
             pil_img.load()
         return pil_img
 
-    def loadBuildingSVGs(self):
+    def loadBuildingPNGs(self):
         dBuildingFiles = [
             "Buildings/Bank.png",
             "Buildings/Bar.png",
@@ -307,7 +307,7 @@ class PILSVG(PILGL):
             img = Image.alpha_composite(imgBg, img)
             self.dBuildings.append(img)
 
-    def loadScenerySVGs(self):
+    def loadSceneryPNGs(self):
         dSceneryFiles = [
             "Scenery/Laubbaume_A.png",
             "Scenery/Laubbaume_B.png",
@@ -348,7 +348,7 @@ class PILSVG(PILGL):
             img = Image.alpha_composite(imgBg, img)
             self.dSceneryDim3.append(img)
 
-    def loadRailSVGs(self):
+    def loadRailPNGs(self):
         """ Load the rail SVG images, apply rotations, and store as PIL images.
         """
         dRailFiles = {
