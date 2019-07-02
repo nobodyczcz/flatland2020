@@ -29,7 +29,8 @@ class PILGL(GraphicsLayer):
                 for m in get_monitors():
                     self.screen_height = min(self.screen_height, m.height)
                     self.screen_width = min(self.screen_width, m.width)
-            except Exception as e:
+            except Exception as e:  # noqa: F841
+                print("[WARNING]: Unable to obtain screen size, so assuming 600x600")
                 self.screen_width = 600
                 self.screen_height = 600
             
