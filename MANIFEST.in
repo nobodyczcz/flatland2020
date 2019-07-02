@@ -8,8 +8,8 @@ include requirements_continuous_integration.txt
 
 
 
-graft svg
 graft env_data
+graft flatland/assets/
 
 
 recursive-include tests *

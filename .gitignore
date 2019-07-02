@@ -113,3 +113,5 @@ ENV/
 
 images/test/
 test_save.dat
+
+test.py

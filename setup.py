@@ -61,7 +61,7 @@ else:
         os.system("pip install pycairo==1.18.1")
 
 
-def get_all_svg_files(directory='./svg/'):
+def get_all_png_files(directory='./flatland/assets/pngs/'):
     ret = []
     for f in os.listdir(directory):
         if os.path.isfile(os.path.join(directory, f)):
@@ -112,7 +112,7 @@ setup(
     keywords='flatland',
     name='flatland-rl',
     packages=find_packages('.'),
-    data_files=[('svg', get_all_svg_files()), ('images', get_all_images_files())],
+    data_files=[('flatland-rl-pngs', get_all_png_files()), ('flatland-rl-images', get_all_images_files())],
     setup_requires=setup_requirements,
     test_suite='tests',
     tests_require=test_requirements,
