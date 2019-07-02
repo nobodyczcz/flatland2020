@@ -24,12 +24,15 @@ class PILGL(GraphicsLayer):
         self.background_grid = np.zeros(shape=(self.width, self.height))
 
         if jupyter is False:
-            self.screen_width = 600
-            self.screen_height = 600
-            # for m in get_monitors():
-            #     self.screen_height = min(self.screen_height, m.height)
-            #     self.screen_width = min(self.screen_width, m.width)
-
+            try:
+                from screeninfo import get_monitors  # noqa: E402
+                for m in get_monitors():
+                    self.screen_height = min(self.screen_height, m.height)
+                    self.screen_width = min(self.screen_width, m.width)
+            except Exception as e:
+                self.screen_width = 600
+                self.screen_height = 600
+            
             w = (self.screen_width - self.width - 10) / (self.width + 1 + self.linewidth)
             h = (self.screen_height - self.height - 10) / (self.height + 1 + self.linewidth)
             self.nPixCell = int(max(1, np.ceil(min(w, h))))
@@ -50,11 +53,11 @@ class PILGL(GraphicsLayer):
         self.tColRail = (0, 0, 0)  # black rails
         self.tColGrid = (230,) * 3  # light grey for grid
 
-        sColors = "d50000#c51162#aa00ff#6200ea#304ffe#2962ff#0091ea#00b8d4#00bfa5#00c853#64dd17#aeea00#ffd600#ffab00#ff6d00#ff3d00#5d4037#455a64"
-        sColors = ['d50000', 'c51162', 'aa00ff', '6200ea', '304ffe', \
-                    '2962ff', '0091ea', '00b8d4', '00bfa5', '00c853', \
-                    '64dd17', 'aeea00', 'ffd600', 'ffab00', 'ff6d00', \
-                    'ff3d00', '5d4037', '455a64']
+        sColors = ['d50000', 'c51162', 'aa00ff', '6200ea', '304ffe',
+                   '2962ff', '0091ea', '00b8d4', '00bfa5', '00c853',
+                   '64dd17', 'aeea00', 'ffd600', 'ffab00', 'ff6d00',
+                   'ff3d00', '5d4037', '455a64'] 
+        
         self.ltAgentColors = [self.rgb_s2i(sColor) for sColor in sColors]
         self.nAgentColors = len(self.ltAgentColors)
 
