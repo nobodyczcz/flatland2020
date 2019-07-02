@@ -106,7 +106,6 @@ class PILGL(GraphicsLayer):
         return self.ltAgentColors[iAgent % self.nAgentColors]
 
     def plot(self, gX, gY, color=None, linewidth=3, layer=0, opacity=255, **kwargs):
-        print("Plotting ", gX, gY)
         color = self.adaptColor(color)
         if len(color) == 3:
             color += (opacity,)
@@ -114,7 +113,6 @@ class PILGL(GraphicsLayer):
             color = color[:3] + (opacity,)
         gPoints = np.stack([array(gX), -array(gY)]).T * self.nPixCell
         gPoints = list(gPoints.ravel())
-        print(self.draws)
         self.draws[layer].line(gPoints, fill=color, width=self.linewidth)
 
     def scatter(self, gX, gY, color=None, marker="o", s=50, layer=0, opacity=255, *args, **kwargs):
