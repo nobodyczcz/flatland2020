@@ -69,9 +69,6 @@ test_conda_setup:
     dependencies:
         - tests
     stage: baselines
-    #    only:
-    #        variables:
-    #            - $BENCHMARKS_AND_PROFILING
     script:
         - wget -nv https://repo.anaconda.com/archive/Anaconda3-5.3.1-Linux-x86_64.sh -O /tmp/Anaconda3-5.3.1-Linux-x86_64.sh
         - bash /tmp/Anaconda3-5.3.1-Linux-x86_64.sh -b -p /tmp/anaconda3
@@ -81,11 +78,9 @@ baselines:
     dependencies:
         - tests
     stage: baselines
-#    only:
-#        variables:
-#            - $BENCHMARKS_AND_PROFILING
     script:
         - git clone http://gitlab.aicrowd.com/flatland/baselines.git
-        - cd baselines; git checkout 42-run-baselines-in-ci; xvfb-run tox -v --recreate
+# inject version of flatland into baseline requirement to have in the tox virtual environment
+        - cd baselines; git checkout 42-run-baselines-in-ci; sed -i s'/@master/${CI_COMMIT_REF_SLUG}/g' requirements_torch_training.txt; xvfb-run tox -v --recreate
 
 
