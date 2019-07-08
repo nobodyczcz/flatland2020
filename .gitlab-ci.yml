@@ -54,7 +54,7 @@ build_and_deploy_docs:
 benchmarks_and_profiling:
     dependencies:
         - tests
-    stage: integration_testing
+    stage: benchmarks_and_profiling
     only:
         variables:
             - $BENCHMARKS_AND_PROFILING
@@ -76,7 +76,7 @@ test_conda_setup:
 baselines:
     dependencies:
         - tests
-    stage: baselines
+    stage: integration_testing
     script:
         - git clone http://gitlab.aicrowd.com/flatland/baselines.git
 # inject version of flatland into baseline requirement to have in the tox virtual environment
