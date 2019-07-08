@@ -23,10 +23,12 @@ before_script:
 
 tests:
     stage: tests
-    script:
+    before_script:
+        - echo "Setting Up...."
         - apt update
         - apt install -y libgl1-mesa-glx xvfb graphviz xdg-utils libcairo2-dev libjpeg-dev libgif-dev
         - pip install tox
+    script:
         - xvfb-run tox -v --recreate
 
 
@@ -58,10 +60,11 @@ benchmarks_and_profiling:
     only:
         variables:
             - $BENCHMARKS_AND_PROFILING
-    script:
+    before_script:
         - apt update
         - apt install -y libgl1-mesa-glx xvfb graphviz xdg-utils libcairo2-dev libjpeg-dev libgif-dev
         - pip install tox
+    script:
         - xvfb-run tox -e benchmarks,profiling -v --recreate
 
 test_conda_setup:
@@ -77,12 +80,15 @@ baselines:
     dependencies:
         - tests
     stage: integration_testing
-    script:
+    before_script:
         - apt update
         - apt install -y libgl1-mesa-glx xvfb graphviz xdg-utils libcairo2-dev libjpeg-dev libgif-dev
         - pip install tox
+
+    script:
+        - python setup.py
         - git clone http://gitlab.aicrowd.com/flatland/baselines.git
-# inject version of flatland into baseline requirement to have in the tox virtual environment
-        - cd baselines; git checkout 42-run-baselines-in-ci; sed -i s'/@master/${CI_COMMIT_REF_SLUG}/g' requirements_torch_training.txt; xvfb-run tox -v --recreate
+# TODO set to baselines master
+        - cd baselines; git checkout 42-run-baselines-in-ci; xvfb-run tox -v --recreate
 
 
