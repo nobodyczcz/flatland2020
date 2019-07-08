@@ -13,6 +13,7 @@ stages:
     - tests
     - benchmarks_and_profiling
     - deploy_docs
+    - baselines
 cache:
     paths:
         - .tox
