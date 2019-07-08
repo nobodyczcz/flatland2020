@@ -13,8 +13,7 @@ stages:
     - tests
     - benchmarks_and_profiling
     - deploy_docs
-    - baselines
-    - test_conda_setup
+    - integration_testing
 cache:
     paths:
         - .tox
@@ -55,7 +54,7 @@ build_and_deploy_docs:
 benchmarks_and_profiling:
     dependencies:
         - tests
-    stage: benchmarks_and_profiling
+    stage: integration_testing
     only:
         variables:
             - $BENCHMARKS_AND_PROFILING
@@ -68,7 +67,7 @@ benchmarks_and_profiling:
 test_conda_setup:
     dependencies:
         - tests
-    stage: baselines
+    stage: integration_testing
     script:
         - wget -nv https://repo.anaconda.com/archive/Anaconda3-5.3.1-Linux-x86_64.sh -O /tmp/Anaconda3-5.3.1-Linux-x86_64.sh
         - bash /tmp/Anaconda3-5.3.1-Linux-x86_64.sh -b -p /tmp/anaconda3
