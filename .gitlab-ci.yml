@@ -86,9 +86,8 @@ baselines:
         - pip install tox
 
     script:
-        - python setup.py install
         - git clone http://gitlab.aicrowd.com/flatland/baselines.git
-# TODO set to baselines master
-        - cd baselines; git checkout 42-run-baselines-in-ci; xvfb-run tox -v --recreate
+# inject version of flatland into baseline requirement to have in the tox virtual environment
+        - cd baselines; git checkout 42-run-baselines-in-ci; sed -i s'/@master/${CI_COMMIT_REF_SLUG}/g' requirements_torch_training.txt; xvfb-run tox -v --recreate
 
 

@@ -30,12 +30,19 @@ def get_all_images_files(directory='./images/'):
 
 # Gather requirements from requirements_dev.txt
 install_reqs = []
+dependency_links = []
 requirements_path = 'requirements_dev.txt'
 with open(requirements_path, 'r') as f:
     install_reqs += [
         s for s in [
             line.strip(' \n') for line in f
-        ] if not s.startswith('#') and s != ''
+        ] if not s.startswith('#') and s != '' and not s.startswith('git+')
+    ]
+with open(requirements_path, 'r') as f:
+    dependency_links += [
+        s for s in [
+            line.strip(' \n') for line in f
+        ] if s.startswith('git+')
     ]
 requirements = install_reqs
 setup_requirements = install_reqs
@@ -67,6 +74,7 @@ setup(
     setup_requires=setup_requirements,
     test_suite='tests',
     tests_require=test_requirements,
+    dependency_links=dependency_links,
     url='https://gitlab.aicrowd.com/flatland/flatland',
     version='0.1.2',
     zip_safe=False,
