@@ -14,6 +14,7 @@ stages:
     - benchmarks_and_profiling
     - deploy_docs
     - baselines
+    - test_conda_setup
 cache:
     paths:
         - .tox
@@ -26,11 +27,9 @@ tests:
     script:
         - apt update
         - apt install -y libgl1-mesa-glx xvfb graphviz xdg-utils libcairo2-dev libjpeg-dev libgif-dev
-        - wget -nv https://repo.anaconda.com/archive/Anaconda3-5.3.1-Linux-x86_64.sh -O /tmp/Anaconda3-5.3.1-Linux-x86_64.sh
-        - bash /tmp/Anaconda3-5.3.1-Linux-x86_64.sh -b -p /tmp/anaconda3
-        - export PATH=/tmp/anaconda3/bin:$PATH; bash getting_started/getting_started.sh
         - pip install tox
         - xvfb-run tox -v --recreate
+
 
 build_and_deploy_docs:
     image: "python:latest"
@@ -66,6 +65,18 @@ benchmarks_and_profiling:
         - pip install tox
         - xvfb-run tox -e benchmarks,profiling -v --recreate
 
+test_conda_setup:
+    dependencies:
+        - tests
+    stage: baselines
+    #    only:
+    #        variables:
+    #            - $BENCHMARKS_AND_PROFILING
+    script:
+        - wget -nv https://repo.anaconda.com/archive/Anaconda3-5.3.1-Linux-x86_64.sh -O /tmp/Anaconda3-5.3.1-Linux-x86_64.sh
+        - bash /tmp/Anaconda3-5.3.1-Linux-x86_64.sh -b -p /tmp/anaconda3
+        - export PATH=/tmp/anaconda3/bin:$PATH; bash getting_started/getting_started.sh
+
 baselines:
     dependencies:
         - tests
@@ -74,9 +85,6 @@ baselines:
 #        variables:
 #            - $BENCHMARKS_AND_PROFILING
     script:
-        - apt update
-        - apt install -y libgl1-mesa-glx xvfb graphviz xdg-utils libcairo2-dev libjpeg-dev libgif-dev
-        - pip install tox
         - git clone http://gitlab.aicrowd.com/flatland/baselines.git
         - cd baselines; git checkout 42-run-baselines-in-ci; xvfb-run tox -v --recreate
 
