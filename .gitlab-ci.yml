@@ -65,4 +65,18 @@ benchmarks_and_profiling:
         - pip install tox
         - xvfb-run tox -e benchmarks,profiling -v --recreate
 
+baselines:
+    dependencies:
+        - tests
+    stage: baselines
+#    only:
+#        variables:
+#            - $BENCHMARKS_AND_PROFILING
+    script:
+        - apt update
+        - apt install -y libgl1-mesa-glx xvfb graphviz xdg-utils libcairo2-dev libjpeg-dev libgif-dev
+        - pip install tox
+        - git clone http://gitlab.aicrowd.com/flatland/baselines.git
+        - cd baselines; git checkout 42-run-baselines-in-ci; xvfb-run tox -v --recreate
+
 
