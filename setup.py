@@ -76,6 +76,6 @@ setup(
     tests_require=test_requirements,
     dependency_links=dependency_links,
     url='https://gitlab.aicrowd.com/flatland/flatland',
-    version='0.1.2',
+    version='0.2.0',
     zip_safe=False,
 )
