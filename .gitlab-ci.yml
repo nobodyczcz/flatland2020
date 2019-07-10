@@ -87,7 +87,8 @@ baselines:
 
     script:
         - git clone http://gitlab.aicrowd.com/flatland/baselines.git
+        - cd baselines; git log | head
 # inject version of flatland into baselines to run baselines against current branch of flatland!
-        - cd baselines; sed -i s'/@master/@${CI_COMMIT_REF_SLUG}/g' requirements_torch_training.txt; xvfb-run tox -v --recreate
+        - cd baselines; sed -i s'/flatland.git@master/flatland.git@${CI_COMMIT_REF_SLUG}/g' requirements_torch_training.txt; xvfb-run tox -v --recreate
 
 
