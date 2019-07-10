@@ -37,8 +37,7 @@ build_and_deploy_docs:
     stage: deploy_docs
     only:
         - master
-    dependencies:
-        - tests
+#
     before_script:
         - apt update
         - apt install -y graphviz libgl1-mesa-glx xvfb xdg-utils libcairo2-dev libjpeg-dev libgif-dev
@@ -54,8 +53,8 @@ build_and_deploy_docs:
         url: http://${BUCKET_NAME}.s3-website.${AWS_DEFAULT_REGION}.amazonaws.com/
 
 benchmarks_and_profiling:
-    dependencies:
-        - tests
+#    dependencies:
+#        - tests
     stage: benchmarks_and_profiling
     only:
         variables:
