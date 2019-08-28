@@ -606,12 +606,13 @@ class PILSVG(PILGL):
             self.draw_image_row_col(bg_svg, (row, col), layer=PILGL.SELECTED_AGENT_LAYER)
 
         if show_debug:
-            # print("Call text:")
             self.text_rowcol((row+0.2, col+0.2,), str(agent_idx))
 
-    def set_cell_occupied(self, agent_idx, row, col):
+    def set_cell_occupied(self, agent_idx, row, col, show_debug=False):
         occupied_im = self.cell_occupied[agent_idx % len(self.cell_occupied)]
         self.draw_image_row_col(occupied_im, (row, col), 1)
+        if show_debug:
+            self.text_rowcol((row+0.2, col+0.2,), str(agent_idx))
 
 
 def main2():

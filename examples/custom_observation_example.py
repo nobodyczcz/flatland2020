@@ -9,7 +9,7 @@ from flatland.envs.generators import random_rail_generator, complex_rail_generat
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv
-from flatland.utils.rendertools import RenderTool
+from flatland.utils.rendertools import RenderTool, AgentRenderVariant
 
 random.seed(100)
 np.random.seed(100)
@@ -204,7 +204,9 @@ env = RailEnv(width=10,
               obs_builder_object=CustomObsBuilder)
 
 obs = env.reset()
-env_renderer = RenderTool(env, gl="PILSVG")
+
+env_renderer = RenderTool(env, gl="PILSVG", show_debug=True,
+    agent_render_variant=AgentRenderVariant.AGENT_SHOWS_OPTIONS_AND_BOX)
 
 # We render the initial step and show the obsered cells as colored boxes
 env_renderer.render_env(show=True, frames=True, show_observations=True, show_predictions=False)
