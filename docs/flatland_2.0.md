@@ -1,8 +1,8 @@
 # Flatland 2.0 Introduction
 
-## Whats new
+## What's new?
 
-In this version of **Flat**land we are moving closer to realistic and more complex railway problems. Earlier versions of **Flat**land which introduced you to the concept of restricted transitions was still to simplified to give us feasible solutions for daily operations. Thus the following changes are coming in the next version to be closer to real railway network challenges:
+In this version of **Flatland** we are moving closer to realistic and more complex railway problems. Earlier versions of **Flat**land which introduced you to the concept of restricted transitions was still to simplified to give us feasible solutions for daily operations. Thus the following changes are coming in the next version to be closer to real railway network challenges:
 
 - **New Level Generator** with less connections between different nodes in the network and thus much higher agent densities on rails.
 - **Stochastic Events** that cause agents to stop and get stuck for different number of time steps.
