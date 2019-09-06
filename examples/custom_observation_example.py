@@ -206,7 +206,8 @@ env = RailEnv(width=10,
               rail_generator=complex_rail_generator(nr_start_goal=5, nr_extra=1, min_dist=8, max_dist=99999, seed=0),
               schedule_generator=complex_schedule_generator(),
               number_of_agents=3,
-              obs_builder_object=CustomObsBuilder)
+              obs_builder_object=CustomObsBuilder,
+              save_episodes=True)
 
 obs = env.reset()
 env_renderer = RenderTool(env, gl="PILSVG")
@@ -222,4 +223,8 @@ for step in range(100):
     obs, all_rewards, done, _ = env.step(action_dict)
     print("Rewards: ", all_rewards, "  [done=", done, "]")
     env_renderer.render_env(show=True, frames=True, show_observations=True, show_predictions=False)
-    time.sleep(0.5)
+    time.sleep(0.01)
+
+sFilename = "saved_episode_{:}x{:}.mpk".format(*env.rail.grid.shape)
+env.save(sFilename)
+
