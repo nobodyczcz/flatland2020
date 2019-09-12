@@ -438,7 +438,7 @@ class RailEnv(Environment):
                     cell_free, new_cell_valid, new_direction, new_position, transition_valid = self._check_action_on_agent(
                         agent.speed_data['transition_action_on_cellexit'], agent)
 
-                    if cell_free:
+                    if cell_free and new_cell_valid and transition_valid:
                         agent.position = new_position
                         agent.direction = new_direction
                         agent.speed_data['position_fraction'] = 0.0
