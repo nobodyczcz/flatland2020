@@ -291,7 +291,7 @@ class RailEnv(Environment):
         # If counter has come to zero --> Agent has malfunction
         # set next malfunction time and duration of current malfunction
         if agent.malfunction_data['malfunction_rate'] > 0 >= agent.malfunction_data['malfunction'] and \
-            agent.malfunction_data['next_malfunction'] <= 0:
+            agent.malfunction_data['next_malfunction'] <= 0:  # noqa: E125
             # Increase number of malfunctions
             agent.malfunction_data['nr_malfunctions'] += 1
 
@@ -364,7 +364,7 @@ class RailEnv(Environment):
                     self.rewards_dict[i_agent] += self.stop_penalty
 
                 if not agent.moving and not (
-                    action == RailEnvActions.DO_NOTHING or action == RailEnvActions.STOP_MOVING):
+                    action == RailEnvActions.DO_NOTHING or action == RailEnvActions.STOP_MOVING):  # noqa: E125
                     # Allow agent to start with any forward or direction action
                     agent.moving = True
                     self.rewards_dict[i_agent] += self.start_penalty
@@ -435,8 +435,8 @@ class RailEnv(Environment):
                     # so we only have to check cell_free now!
 
                     # cell and transition validity was checked when we stored transition_action_on_cellexit!
-                    cell_free, new_cell_valid, new_direction, new_position, transition_valid = self._check_action_on_agent(
-                        agent.speed_data['transition_action_on_cellexit'], agent)
+                    cell_free, new_cell_valid, new_direction, new_position, transition_valid = \
+                        self._check_action_on_agent(agent.speed_data['transition_action_on_cellexit'], agent)
 
                     if cell_free and new_cell_valid and transition_valid:
                         agent.position = new_position
