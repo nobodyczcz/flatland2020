@@ -578,11 +578,7 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
                                                                 nb_nodes,
                                                                 nodes_per_row, x_positions,
                                                                 y_positions)
-
-
-
         else:
-
             node_positions = _generate_node_positions_not_grid_mode(city_positions, height,
                                                                     intersection_positions,
                                                                     nb_nodes, width)
@@ -810,7 +806,7 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
                 tries += 1
                 if tries > 100:
                     warnings.warn(
-                        "Could not only set {} nodes after {} tries, although {} of nodes required to be generated!".format(
+                        "Could not only set {} nodes after {} tries, {} required nodes to be generated!".format(
                             len(node_positions),
                             tries, nb_nodes))
                     break

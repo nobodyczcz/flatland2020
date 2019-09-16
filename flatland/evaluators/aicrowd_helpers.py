@@ -7,15 +7,15 @@ import random
 ###############################################################
 # Expected Env Variables
 ###############################################################
-# Default Values to be provided :
-# AICROWD_IS_GRADING : true
-# CROWDAI_IS_GRADING : true
-# S3_BUCKET : aicrowd-production
-# S3_UPLOAD_PATH_TEMPLATE : misc/flatland-rl-Media/{}.mp4
-# AWS_ACCESS_KEY_ID
-# AWS_SECRET_ACCESS_KEY
-# http_proxy
-# https_proxy
+# - Default Values to be provided :
+# - AICROWD_IS_GRADING : true
+# - CROWDAI_IS_GRADING : true
+# - S3_BUCKET : aicrowd-production
+# - S3_UPLOAD_PATH_TEMPLATE : misc/flatland-rl-Media/{}.mp4
+# - AWS_ACCESS_KEY_ID
+# - AWS_SECRET_ACCESS_KEY
+# - http_proxy
+# - https_proxy
 ###############################################################
 AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID", False)
 AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", False)
@@ -28,7 +28,7 @@ def get_boto_client():
         raise Exception("AWS Credentials not provided..")
     try:
         import boto3
-    except ImportError as e:
+    except ImportError:
         raise Exception(
                         "boto3 is not installed. Please manually install by : ",
                         " pip install -U boto3"

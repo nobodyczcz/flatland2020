@@ -201,7 +201,7 @@ class FlatlandRemoteEvaluationService:
         redis_conn = redis.Redis(connection_pool=self.redis_pool)
         try:
             redis_conn.ping()
-        except Exception as e:
+        except Exception:
             raise Exception(
                 "Unable to connect to redis server at {}:{} ."
                 "Are you sure there is a redis-server running at the "
@@ -381,12 +381,10 @@ class FlatlandRemoteEvaluationService:
         _payload = command['payload']
 
         if not self.env:
-            raise Exception(
-                "env_client.step called before env_client.env_create() call")
+            raise Exception("env_client.step called before env_client.env_create() call")
         if self.env.dones['__all__']:
             raise Exception(
-                "Client attempted to perform an action on an Env which \
-                has done['__all__']==True")
+                "Client attempted to perform an action on an Env which has done['__all__']==True")
 
         action = _payload['action']
         _observation, all_rewards, done, info = self.env.step(action)
@@ -579,8 +577,7 @@ class FlatlandRemoteEvaluationService:
             if self.verbose:
                 print("Self.Reward : ", self.reward)
                 print("Current Simulation : ", self.simulation_count)
-                if self.env_file_paths and \
-                    self.simulation_count < len(self.env_file_paths):
+                if self.env_file_paths and self.simulation_count < len(self.env_file_paths):
                     print("Current Env Path : ",
                           self.env_file_paths[self.simulation_count])
 

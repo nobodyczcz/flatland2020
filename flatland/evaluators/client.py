@@ -23,10 +23,7 @@ m.patch()
 
 def are_dicts_equal(d1, d2):
     """ return True if all keys and values are the same """
-    return all(k in d2 and d1[k] == d2[k]
-               for k in d1) \
-           and all(k in d1 and d1[k] == d2[k]
-                   for k in d2)
+    return all(k in d2 and d1[k] == d2[k] for k in d1) and all(k in d1 and d1[k] == d2[k] for k in d2)
 
 
 class FlatlandRemoteClient(object):
@@ -212,7 +209,7 @@ class FlatlandRemoteClient(object):
         _response = self._blocking_request(_request)
         _payload = _response['payload']
 
-        # remote_observation = _payload['observation']
+        # removed remote_observation = _payload['observation']
         remote_reward = _payload['reward']
         remote_done = _payload['done']
         remote_info = _payload['info']
@@ -254,14 +251,16 @@ class FlatlandRemoteClient(object):
 if __name__ == "__main__":
     remote_client = FlatlandRemoteClient()
 
-    def my_controller(obs, _env):
+
+    def my_controller(obs, _env):  # noqa: E303
         _action = {}
         for _idx, _ in enumerate(_env.agents):
             _action[_idx] = np.random.randint(0, 5)
         return _action
 
-    my_observation_builder = TreeObsForRailEnv(max_depth=3,
-                                               predictor=ShortestPathPredictorForRailEnv())
+
+    # Build observation builder
+    my_observation_builder = TreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv())
 
     episode = 0
     obs = True

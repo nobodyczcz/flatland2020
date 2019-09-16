@@ -348,7 +348,6 @@ class GridTransitionMap(TransitionMap):
         return is_simple_turn(tmp)
 
     def check_path_exists(self, start, direction, end):
-        # print("_path_exists({},{},{}".format(start, direction, end))
         # BFS - Check if a path exists between the 2 nodes
 
         visited = set()

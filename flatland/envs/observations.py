@@ -711,10 +711,6 @@ class LocalObsForRailEnv(ObservationBuilder):
         agents = self.env.agents
         agent = agents[handle]
 
-        # Correct agents position for padding
-        # agent_rel_pos[0] = agent.position[0] + self.max_padding
-        # agent_rel_pos[1] = agent.position[1] + self.max_padding
-
         # Collect visible cells as set to be plotted
         visited, rel_coords = self.field_of_view(agent.position, agent.direction, )
         local_rail_obs = None
@@ -780,26 +776,18 @@ class LocalObsForRailEnv(ObservationBuilder):
                     if 0 <= origin[0] - h < self.env.height and 0 <= origin[1] + w < self.env.width:
                         visible.append((origin[0] - h, origin[1] + w))
                         rel_coords.append((h, w))
-                    # if data_collection:
-                    #    temp_visible_data[h, w, :] = state[origin[0] - h, origin[1] + w, :]
                 elif direction == 1:
                     if 0 <= origin[0] + w < self.env.height and 0 <= origin[1] + h < self.env.width:
                         visible.append((origin[0] + w, origin[1] + h))
                         rel_coords.append((h, w))
-                    # if data_collection:
-                    #    temp_visible_data[h, w, :] = state[origin[0] + w, origin[1] + h, :]
                 elif direction == 2:
                     if 0 <= origin[0] + h < self.env.height and 0 <= origin[1] - w < self.env.width:
                         visible.append((origin[0] + h, origin[1] - w))
                         rel_coords.append((h, w))
-                    # if data_collection:
-                    #    temp_visible_data[h, w, :] = state[origin[0] + h, origin[1] - w, :]
                 else:
                     if 0 <= origin[0] - w < self.env.height and 0 <= origin[1] - h < self.env.width:
                         visible.append((origin[0] - w, origin[1] - h))
                         rel_coords.append((h, w))
-                    # if data_collection:
-                    #    temp_visible_data[h, w, :] = state[origin[0] - w, origin[1] - h, :]
         if data_collection:
             return temp_visible_data
         else:
