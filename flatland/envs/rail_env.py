@@ -403,15 +403,19 @@ class RailEnv(Environment):
             if new_malfunction:
                 continue
 
+                # otherwise, we chose a direction and action, so system should not change them
+
             # The train was broken before...
             if agent.malfunction_data['malfunction'] > 0:
 
                 # Last step of malfunction --> Agent starts moving again after getting fixed
                 if agent.malfunction_data['malfunction'] < 2:
                     agent.malfunction_data['malfunction'] -= 1
-                    self.agents[i_agent].moving = True
-                    action = RailEnvActions.DO_NOTHING
-
+                    # fix : vetrov_andrew @TODO Erik/Christian please double-check this
+                    if agent.speed_data['position_fraction'] != 0.0:  # agent must move forward, as long as it is
+                        # between two cells
+                        self.agents[i_agent].moving = True
+                        action = RailEnvActions.DO_NOTHING
                 else:
                     agent.malfunction_data['malfunction'] -= 1
 
