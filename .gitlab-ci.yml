@@ -109,7 +109,6 @@ baselines:
         - pip install tox awscli
         - conda update -n root conda -y
         - conda install -c conda-forge tox-conda
-        -
     script:
         - git clone http://gitlab.aicrowd.com/flatland/baselines.git
         - cd baselines
