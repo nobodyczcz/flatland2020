@@ -118,7 +118,8 @@ class RailEnv(Environment):
                  max_episode_steps=None,
                  stochastic_data=None,
                  remove_agents_at_target=False,
-                 random_seed=1
+                 random_seed=1,
+                 record_steps=False
                  ):
         """
         Environment init.
@@ -221,6 +222,10 @@ class RailEnv(Environment):
         self.num_resets = 0  # yes, set it to zero again!
 
         self.valid_positions = None
+
+        # save episode timesteps ie agent positions, orientations.  (not yet actions / observations)
+        self.record_steps = record_steps  # whether to save timesteps
+        self.cur_episode = []  # save timesteps in here
 
     def _seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
@@ -391,6 +396,9 @@ class RailEnv(Environment):
         return False
 
     def step(self, action_dict_: Dict[int, RailEnvActions]):
+
+        if self.record_steps:
+            self.record_timestep()
 
         self._elapsed_steps += 1
 
@@ -575,6 +583,16 @@ class RailEnv(Environment):
             # step penalty if not moving (stopped now or before)
             self.rewards_dict[i_agent] += self.step_penalty * agent.speed_data['speed']
 
+    def record_timestep(self):
+        ''' Record the positions and orientations of all agents in memory, in the cur_episode
+        '''
+        list_agents_state = []
+        for i_agent in range(self.get_num_agents()):
+            agent = self.agents[i_agent]
+            # the int cast is to avoid numpy types which may cause problems with msgpack
+            list_agents_state.append([*agent.position, int(agent.direction)])
+        self.cur_episode.append(list_agents_state)
+
     def _check_action_on_agent(self, action: RailEnvActions, agent: EnvAgent):
         """
 
@@ -747,6 +765,12 @@ class RailEnv(Environment):
             with open(filename,"wb") as file_out:
                 file_out.write(self.get_full_state_msg())
 
+    def save_episode(self, filename):
+        episode_data = self.cur_episode
+        msgpack.packb(episode_data, use_bin_type=True)
+        msg_data = {"episode": episode_data}
+        with open(filename, "wb") as file_out:
+            file_out.write(msg_data)
     def load(self, filename):
         with open(filename, "rb") as file_in:
             load_data = file_in.read()
