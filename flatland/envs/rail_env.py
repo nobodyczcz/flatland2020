@@ -590,7 +590,13 @@ class RailEnv(Environment):
         for i_agent in range(self.get_num_agents()):
             agent = self.agents[i_agent]
             # the int cast is to avoid numpy types which may cause problems with msgpack
-            list_agents_state.append([*agent.position, int(agent.direction)])
+            # in env v2, agents may have position None, before starting
+            if agent.position is None:
+                pos = (0, 0)
+            else:
+                pos = (int(agent.position[0]), int(agent.position[1]))
+            print("pos:", pos, type(pos[0]))
+            list_agents_state.append([*pos, int(agent.direction)])
         self.cur_episode.append(list_agents_state)
 
     def _check_action_on_agent(self, action: RailEnvActions, agent: EnvAgent):
@@ -768,9 +774,11 @@ class RailEnv(Environment):
     def save_episode(self, filename):
         episode_data = self.cur_episode
         msgpack.packb(episode_data, use_bin_type=True)
-        msg_data = {"episode": episode_data}
+        dict_data = {"episode": episode_data}
+        # msgpack.packb(msg_data, use_bin_type=True)
         with open(filename, "wb") as file_out:
-            file_out.write(msg_data)
+            file_out.write(msgpack.packb(dict_data))
+
     def load(self, filename):
         with open(filename, "rb") as file_in:
             load_data = file_in.read()
