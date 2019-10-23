@@ -595,7 +595,7 @@ class RailEnv(Environment):
                 pos = (0, 0)
             else:
                 pos = (int(agent.position[0]), int(agent.position[1]))
-            print("pos:", pos, type(pos[0]))
+            # print("pos:", pos, type(pos[0]))
             list_agents_state.append([*pos, int(agent.direction)])
         self.cur_episode.append(list_agents_state)
 
