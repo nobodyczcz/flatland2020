@@ -354,15 +354,17 @@ class RailEnv(Environment):
         agent = self.agents[i_agent]
 
         # Decrease counter for next event only if agent is currently not broken and agent has a malfunction rate
-        if agent.malfunction_data['malfunction_rate'] >= 1 and agent.malfunction_data['next_malfunction'] > 0 and \
-            agent.malfunction_data['malfunction'] < 1:
+        if (agent.malfunction_data['malfunction_rate'] >= 1 and
+                agent.malfunction_data['next_malfunction'] > 0 and 
+                agent.malfunction_data['malfunction'] < 1):
             agent.malfunction_data['next_malfunction'] -= 1
 
         # Only agents that have a positive rate for malfunctions and are not currently broken are considered
         # If counter has come to zero --> Agent has malfunction
         # set next malfunction time and duration of current malfunction
-        if agent.malfunction_data['malfunction_rate'] >= 1 and 1 > agent.malfunction_data['malfunction'] and \
-            agent.malfunction_data['next_malfunction'] < 1:
+        if (agent.malfunction_data['malfunction_rate'] >= 1 and 
+                1 > agent.malfunction_data['malfunction'] and 
+                agent.malfunction_data['next_malfunction'] < 1):
             # Increase number of malfunctions
             agent.malfunction_data['nr_malfunctions'] += 1
 
@@ -513,7 +515,7 @@ class RailEnv(Environment):
                 self.rewards_dict[i_agent] += self.stop_penalty
 
             if not agent.moving and not (
-                action == RailEnvActions.DO_NOTHING or action == RailEnvActions.STOP_MOVING):
+                    action == RailEnvActions.DO_NOTHING or action == RailEnvActions.STOP_MOVING):
                 # Allow agent to start with any forward or direction action
                 agent.moving = True
                 self.rewards_dict[i_agent] += self.start_penalty
@@ -768,7 +770,7 @@ class RailEnv(Environment):
                 print("[WARNING] Unable to save the distance map for this environment, as none was found !")
 
         else:
-            with open(filename,"wb") as file_out:
+            with open(filename, "wb") as file_out:
                 file_out.write(self.get_full_state_msg())
 
     def save_episode(self, filename):
