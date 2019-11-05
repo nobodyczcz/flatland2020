@@ -39,21 +39,23 @@ class RenderTool(object):
     theta = np.linspace(0, np.pi / 2, 5)
     arc = array([np.cos(theta), np.sin(theta)]).T  # from [1,0] to [0,1]
 
-    def __init__(self, env, gl="PILSVG", jupyter=False, agent_render_variant=AgentRenderVariant.ONE_STEP_BEHIND):
+    def __init__(self, env, gl="PILSVG", jupyter=False,
+                 agent_render_variant=AgentRenderVariant.ONE_STEP_BEHIND):
         self.env = env
         self.frame_nr = 0
         self.start_time = time.time()
         self.times_list = deque()
 
         self.agent_render_variant = agent_render_variant
-
+        w = env.width #1200
+        h = env.height #900
         if gl == "PIL":
-            self.gl = PILGL(env.width, env.height, jupyter)
+            self.gl = PILGL(w, h, jupyter)
         elif gl == "PILSVG":
-            self.gl = PILSVG(env.width, env.height, jupyter)
+            self.gl = PILSVG(w, h, jupyter)
         else:
             print("[", gl, "] not found, switch to PILSVG")
-            self.gl = PILSVG(env.width, env.height, jupyter)
+            self.gl = PILSVG(w, h, jupyter)
 
         self.new_rail = True
         self.update_background()

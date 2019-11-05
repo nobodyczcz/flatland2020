@@ -57,13 +57,16 @@ class PILGL(GraphicsLayer):
             #       way to compute the screen width and height
             #       In the meantime, we are harcoding the 800x600 
             #       assumption
-            self.screen_width = 800
-            self.screen_height = 600
+            self.screen_width = 800*3
+            self.screen_height = 600*3
             w = (self.screen_width - self.width - 10) / (self.width + 1 + self.linewidth)
             h = (self.screen_height - self.height - 10) / (self.height + 1 + self.linewidth)
             self.nPixCell = int(max(1, np.ceil(min(w, h))))
         else:
             self.nPixCell = 40
+
+
+
 
         # Total grid size at native scale
         self.widthPx = self.width * self.nPixCell + self.linewidth
@@ -518,8 +521,17 @@ class PILSVG(PILGL):
                     pil_track = self.scenery[a % len(self.scenery)]
 
             self.draw_image_row_col(pil_track, (row, col), layer=PILGL.RAIL_LAYER)
+
+            if binary_trans != 0:
+                svgBG = self.pil_from_svg_file("svg", "Selected_Target.svg")
+                #self.clear_layer(PILGL.SELECTED_TARGET_LAYER, 0)
+                self.draw_image_row_col(svgBG, (row, col), layer=PILGL.SELECTED_TARGET_LAYER)
+
+
         else:
             print("Illegal rail:", row, col, format(binary_trans, "#018b")[2:], binary_trans)
+
+
 
         if target is not None:
             if is_selected:
