@@ -13,6 +13,24 @@ from flatland.envs.schedule_generators import sparse_schedule_generator
 # We also include a renderer because we want to visualize what is going on in the environment
 from flatland.utils.rendertools import RenderTool, AgentRenderVariant
 
+# These are used in the notebook version of this code
+from IPython.core.display import display, HTML, clear_output
+import PIL
+import time
+# Test if we are running in a notebook
+# https://stackoverflow.com/questions/15411967/how-can-i-check-if-code-is-executed-in-the-ipython-notebook
+in_notebook = False
+try:
+    # get_ipython() is only defined inside ipython; we have to ignore it in flake8 with noqa
+    get_ipython()  # noqa F821
+    in_notebook = True
+except(NameError):
+    in_notebook = False 
+
+# Make the cells wider than the default:
+if in_notebook:
+    display(HTML("<style>.container { width:95% !important; }</style>"))
+
 # This is an introduction example for the Flatland 2.1.* version.
 # Changes and highlights of this version include
 # - Stochastic events (malfunctions)
@@ -29,10 +47,17 @@ from flatland.utils.rendertools import RenderTool, AgentRenderVariant
 # The railway infrastructure can be build using any of the provided generators in env/rail_generators.py
 # Here we use the sparse_rail_generator with the following parameters
 
-width = 16 * 7  # With of map
-height = 9 * 7  # Height of map
-nr_trains = 50  # Number of trains that have an assigned task in the env
-cities_in_map = 20  # Number of cities where agents can start or end
+if in_notebook:  # use a smaller map in the notebook
+    width = 30  # With of map
+    height = 30  # Height of map
+    nr_trains = 5  # Number of trains that have an assigned task in the env
+    cities_in_map = 2  # Number of cities where agents can start or end
+else:
+    width = 16 * 7  # With of map
+    height = 9 * 7  # Height of map
+    nr_trains = 50  # Number of trains that have an assigned task in the env
+    cities_in_map = 20  # Number of cities where agents can start or end
+    
 seed = 14  # Random seed
 grid_distribution_of_cities = False  # Type of city distribution, if False cities are randomly placed
 max_rails_between_cities = 2  # Max number of tracks allowed between cities. This is number of entry point to a city
@@ -138,7 +163,8 @@ controller = RandomAgent(218, env.action_space[0])
 print("\n Agents in the environment have to solve the following tasks: \n")
 for agent_idx, agent in enumerate(env.agents):
     print(
-        "The agent with index {} has the task to go from its initial position {}, facing in the direction {} to its target at {}.".format(
+        "The agent with index {} has the task to go from its initial position {}," +
+        "facing in the direction {} to its target at {}.".format(
             agent_idx, agent.initial_position, agent.direction, agent.target))
 
 # The agent will always have a status indicating if it is currently present in the environment or done or active
@@ -243,7 +269,12 @@ score = 0
 # Run episode
 frame_step = 0
 
-for step in range(500):
+if in_notebook:
+    nSteps = 5  # just 5 steps at a time - rerun the cell for more steps
+else:
+    nSteps = 500
+
+for step in range(nSteps):
     # Chose an action for each agent in the environment
     for a in range(env.get_num_agents()):
         action = controller.act(observations[a])
@@ -254,8 +285,8 @@ for step in range(500):
 
     next_obs, all_rewards, done, _ = env.step(action_dict)
 
-    env_renderer.render_env(show=True, show_observations=False, show_predictions=False)
-    env_renderer.gl.save_image('./misc/Fames2/flatland_frame_{:04d}.png'.format(step))
+    env_renderer.render_env(show=not in_notebook, show_observations=False, show_predictions=False)
+    # env_renderer.gl.save_image('./misc/Fames2/flatland_frame_{:04d}.png'.format(step))
     frame_step += 1
     # Update replay buffer and train agent
     for a in range(env.get_num_agents()):
@@ -266,3 +297,11 @@ for step in range(500):
     if done['__all__']:
         break
     print('Episode: Steps {}\t Score = {}'.format(step, score))
+
+    if in_notebook:
+        arrImage = env_renderer.get_image()
+        pilImage = PIL.Image.fromarray(arrImage)
+        clear_output()
+        display(pilImage)
+        time.sleep(0.3)
+    

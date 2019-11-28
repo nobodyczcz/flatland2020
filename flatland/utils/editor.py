@@ -151,7 +151,7 @@ class View(object):
                 if hasattr(a, 'old_direction') is False:
                     a.old_direction = a.direction
 
-            self.oRT.render_env(agents=True,
+            self.oRT.render_env(show_agents=True,
                                 show=False,
                                 selected_agent=self.model.selected_agent,
                                 show_observations=False)
@@ -689,7 +689,10 @@ class EditorModel(object):
             # No
             if self.selected_agent is None:
                 # Create a new agent and select it.
-                agent = EnvAgent(position=cell_row_col, direction=0, target=cell_row_col, moving=False)
+                agent = EnvAgent(initial_position=cell_row_col,
+                    initial_direction=0, 
+                    direction=0,
+                    target=cell_row_col, moving=False)
                 self.selected_agent = self.env.add_agent(agent)
                 self.view.oRT.update_background()
             else:
