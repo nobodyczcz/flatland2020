@@ -17,6 +17,9 @@ from flatland.utils.rendertools import RenderTool, AgentRenderVariant
 from IPython.core.display import display, HTML, clear_output
 import PIL
 import time
+import sys
+import os
+
 # Test if we are running in a notebook
 # https://stackoverflow.com/questions/15411967/how-can-i-check-if-code-is-executed-in-the-ipython-notebook
 in_notebook = False
@@ -30,6 +33,20 @@ except(NameError):
 # Make the cells wider than the default:
 if in_notebook:
     display(HTML("<style>.container { width:95% !important; }</style>"))
+    if not os.path.exists("flatland-installed.flag"):
+        print("Running install steps for Google Colab - assuming apt works!")
+        os.system("apt-get install -y xvfb python-opengl")
+        os.system("apt install x11-utils")
+        os.system("pip install pyvirtualdisplay")
+        os.system("pip install flatland-rl")
+        os.system("touch ./flatland-installed.flag")
+        print("You may need to restart runtime on Colab now...")
+    else:
+        print("Looks like flatland-rl and reqts are already installed - skipping install")
+
+    import pyvirtualdisplay
+    xdisplay = pyvirtualdisplay.Display(visible=0, size=(400,300))
+    print(xdisplay.start())
 
 # This is an introduction example for the Flatland 2.1.* version.
 # Changes and highlights of this version include
