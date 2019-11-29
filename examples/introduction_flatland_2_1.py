@@ -14,13 +14,17 @@ except(NameError):
 
 # Make the cells wider than the default:
 if in_notebook:
-    display(HTML("<style>.container { width:95% !important; }</style>"))
+    # display(HTML("<style>.container { width:95% !important; }</style>"))
     if not os.path.exists("flatland-installed.flag"):
         print("Running install steps for Google Colab - assuming apt works!")
+        print("Checking out a specific branch and installing locally")
+        os.system("git clone https://github.com/hagrid67/flatland.git")
+        os.system("cd ./flatland && git checkout 223_UpdateEditor_55_notebooks")
+        os.system("pip install -e ./flatland/")
         os.system("apt-get install -y xvfb python-opengl")
         os.system("apt install x11-utils")
         os.system("pip install pyvirtualdisplay")
-        os.system("pip install flatland-rl")
+        # os.system("pip install flatland-rl")
         os.system("touch ./flatland-installed.flag")
         print("You may need to restart runtime on Colab now...")
     else:
