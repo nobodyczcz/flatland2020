@@ -1,23 +1,5 @@
-import numpy as np
 
-# In Flatland you can use custom observation builders and predicitors
-# Observation builders generate the observation needed by the controller
-# Preditctors can be used to do short time prediction which can help in avoiding conflicts in the network
-from flatland.envs.malfunction_generators import malfunction_from_params, MalfunctionParameters
-from flatland.envs.observations import GlobalObsForRailEnv
-# First of all we import the Flatland rail environment
-from flatland.envs.rail_env import RailEnv
-from flatland.envs.rail_env import RailEnvActions
-from flatland.envs.rail_generators import sparse_rail_generator
-from flatland.envs.schedule_generators import sparse_schedule_generator
-# We also include a renderer because we want to visualize what is going on in the environment
-from flatland.utils.rendertools import RenderTool, AgentRenderVariant
-
-# These are used in the notebook version of this code
-from IPython.core.display import display, HTML, clear_output
-import PIL
 import time
-import sys
 import os
 
 # Test if we are running in a notebook
@@ -44,9 +26,30 @@ if in_notebook:
     else:
         print("Looks like flatland-rl and reqts are already installed - skipping install")
 
+    print("Starting Xorg xvfb virtual display for Colab")
     import pyvirtualdisplay
-    xdisplay = pyvirtualdisplay.Display(visible=0, size=(400,300))
+    xdisplay = pyvirtualdisplay.Display(visible=0, size=(400, 300))
     print(xdisplay.start())
+
+import numpy as np  # noqa e402
+
+# In Flatland you can use custom observation builders and predicitors
+# Observation builders generate the observation needed by the controller
+# Preditctors can be used to do short time prediction which can help in avoiding conflicts in the network
+from flatland.envs.malfunction_generators import malfunction_from_params, MalfunctionParameters
+from flatland.envs.observations import GlobalObsForRailEnv
+# First of all we import the Flatland rail environment
+from flatland.envs.rail_env import RailEnv
+from flatland.envs.rail_env import RailEnvActions
+from flatland.envs.rail_generators import sparse_rail_generator
+from flatland.envs.schedule_generators import sparse_schedule_generator
+# We also include a renderer because we want to visualize what is going on in the environment
+from flatland.utils.rendertools import RenderTool, AgentRenderVariant
+
+# These are used in the notebook version of this code, but not the plain python
+from IPython.core.display import display, HTML, clear_output
+import PIL
+
 
 # This is an introduction example for the Flatland 2.1.* version.
 # Changes and highlights of this version include
