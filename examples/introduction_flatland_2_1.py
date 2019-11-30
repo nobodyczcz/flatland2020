@@ -12,9 +12,8 @@ try:
 except(NameError):
     in_notebook = False 
 
-# Make the cells wider than the default:
-if in_notebook:
-    # display(HTML("<style>.container { width:95% !important; }</style>"))
+
+def run_colab_install():
     if not os.path.exists("flatland-installed.flag"):
         print("Running install steps for Google Colab - assuming apt works!")
         print("Checking out a specific branch and installing locally")
@@ -35,6 +34,21 @@ if in_notebook:
     xdisplay = pyvirtualdisplay.Display(visible=0, size=(400, 300))
     print(xdisplay.start())
 
+
+def click_action(widget):
+    run_colab_install()
+
+
+# Make a button to run the install function
+if in_notebook:
+    import ipywidgets
+    from IPython.core.display import display, clear_output
+    import PIL
+
+    wButton = ipywidgets.Button(description="Run Colab Install")
+    wButton.on_click(click_action)
+    display(wButton)
+
 import numpy as np  # noqa e402
 
 # In Flatland you can use custom observation builders and predicitors
@@ -50,9 +64,7 @@ from flatland.envs.schedule_generators import sparse_schedule_generator
 # We also include a renderer because we want to visualize what is going on in the environment
 from flatland.utils.rendertools import RenderTool, AgentRenderVariant
 
-# These are used in the notebook version of this code, but not the plain python
-from IPython.core.display import display, HTML, clear_output
-import PIL
+
 
 
 # This is an introduction example for the Flatland 2.1.* version.
