@@ -2,7 +2,7 @@ import time
 
 import numpy as np
 
-from flatland.envs.malfunction_generators import malfunction_from_params, MalfunctionParameters
+from flatland.envs.malfunction_generators import malfunction_from_params
 from flatland.envs.observations import TreeObsForRailEnv, GlobalObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv
@@ -16,10 +16,12 @@ np.random.seed(1)
 # Training on simple small tasks is the best way to get familiar with the environment
 
 # Use a the malfunction generator to break agents from time to time
-stochastic_data = MalfunctionParameters(malfunction_rate=30,  # Rate of malfunction occurence
-                                        min_duration=3,  # Minimal duration of malfunction
-                                        max_duration=20  # Max duration of malfunction
-                                        )
+stochastic_data = {'prop_malfunction': 0.3,  # Percentage of defective agents
+                   'malfunction_rate': 30,  # Rate of malfunction occurence
+                   'min_duration': 3,  # Minimal duration of malfunction
+                   'max_duration': 20  # Max duration of malfunction
+                   }
+
 # Custom observation builder
 TreeObservation = TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv())
 
@@ -102,7 +104,7 @@ start_reset = time.time()
 obs, info = env.reset()
 end_reset = time.time()
 print(end_reset - start_reset)
-print(env.get_num_agents(), )
+print(env.get_num_agents(),)
 # Reset the rendering sytem
 env_renderer.reset()
 

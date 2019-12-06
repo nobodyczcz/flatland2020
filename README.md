@@ -90,9 +90,12 @@ Basic usage of the RailEnv environment used by the Flatland Challenge (also see 
 
 
 ```python
-from flatland.envs.observations import GlobalObsForRailEnv
+import time
+
 # First of all we import the Flatland rail environment
 from flatland.envs.rail_env import RailEnv
+from flatland.envs.malfunction_generators import malfunction_from_params
+from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.rail_generators import sparse_rail_generator
 from flatland.envs.schedule_generators import sparse_schedule_generator
 # We also include a renderer because we want to visualize what is going on in the environment
@@ -154,6 +157,7 @@ env = RailEnv(width=width,
               remove_agents_at_target=True  # Removes agents at the end of their journey to make space for others
               )
 
+
 # Initiate the renderer
 env_renderer = RenderTool(env, gl="PILSVG",
                           agent_render_variant=AgentRenderVariant.AGENT_SHOWS_OPTIONS_AND_BOX,
@@ -167,15 +171,15 @@ def my_controller():
     You are supposed to write this controller
     """
     _action = {}
-    for _idx in range(NUMBER_OF_AGENTS):
+    for _idx in range(env.get_num_agents()):
         _action[_idx] = np.random.randint(0, 5)
     return _action
 
-for step in range(100):
 
+for step in range(100):
     _action = my_controller()
     obs, all_rewards, done, info = env.step(_action)
-    print("Rewards: {}, [done={}]".format( all_rewards, done))
+    print("Rewards: {}, [done={}]".format(all_rewards, done))
     env_renderer.render_env(show=True, frames=False, show_observations=False)
     time.sleep(0.3)
 ```
