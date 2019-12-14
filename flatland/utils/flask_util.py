@@ -96,8 +96,8 @@ class simple_flask_server(object):
     @socketio.on('connect')
     def connected():
         '''
-        When Render Connect
-        Will send map and target to render.
+        When the JS Renderer connects,
+        this method will send the env and agent information
         '''
         cls = simple_flask_server
         print('Client connected')
@@ -105,10 +105,10 @@ class simple_flask_server(object):
         # Do we really need this?
         cls.socketio.emit('message', {'message': 'Connected'})
         
-        print('Send Map')
+        print('Send Env grid and agents')
         # cls.socketio.emit('grid', {'grid': cls.gridmap, 'agents_static': cls.agents_static}, broadcast=False)
         cls.instance.send_env()
-        print("Map sent")
+        print("Env and agents sent")
 
     @staticmethod
     @socketio.on('disconnect')
@@ -116,12 +116,14 @@ class simple_flask_server(object):
         print('Client disconnected')
 
     def send_actions(self, dict_actions):
-        ''' Sends agent positions step by step, not really actions
+        ''' Sends the agent positions and directions, not really actions.
         '''
         llAgents = self.agents_to_list()
         self.socketio.emit('agentsAction', {'actions': llAgents})
 
     def send_env(self):
+        """ Sends the env, ie the rail grid, and the agents (static) information
+        """
         # convert 2d array of int into 2d array of 16char strings
         g2sGrid = np.vectorize(np.binary_repr)(self.env.rail.grid, width=16)
         llGrid = g2sGrid.tolist()
