@@ -1,15 +1,16 @@
 """Test Utils."""
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Mapping
 
 import numpy as np
 from attr import attrs, attrib
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.envs.agent_utils import EnvAgent, RailAgentStatus
-from flatland.envs.malfunction_generators import MalfunctionParameters, malfunction_from_params
+from flatland.envs.malfunction_generators import MalfunctionParameters, malfunction_from_params, \
+    single_malfunction_generator
 from flatland.envs.rail_env import RailEnvActions, RailEnv
-from flatland.envs.rail_generators import RailGenerator
-from flatland.envs.schedule_generators import ScheduleGenerator
+from flatland.envs.rail_generators import RailGenerator, sparse_rail_generator
+from flatland.envs.schedule_generators import ScheduleGenerator, sparse_schedule_generator
 from flatland.utils.rendertools import RenderTool
 
 
@@ -151,3 +152,59 @@ def create_and_save_env(file_name: str, schedule_generator: ScheduleGenerator, r
                   remove_agents_at_target=True)
     env.reset(True, True)
     env.save(file_name)
+
+
+def create_flatland_environment_with_malfunction(number_of_agents: int,
+                                                 width: int,
+                                                 height: int,
+                                                 seed_value: int,
+                                                 max_num_cities: int,
+                                                 grid_mode: bool,
+                                                 max_rails_between_cities: int,
+                                                 max_rails_in_city: int,
+                                                 earliest_malfunction: int,
+                                                 malfunction_duration: int,
+                                                 speed_data: Mapping[float, float]
+                                                 ) -> (RailEnv, int):
+    """
+    Generates sparse envs WITH malfunctions for our research experiments
+
+    Parameters
+    ----------
+    number_of_agents
+    width
+    height
+    seed_value
+    max_num_cities
+    grid_mode
+    max_rails_between_cities
+    max_rails_in_city
+    earliest_malfunction
+    malfunction_duration
+    speed_data
+
+    Returns
+    -------
+
+    """
+    rail_generator = sparse_rail_generator(max_num_cities=max_num_cities,
+                                           grid_mode=grid_mode,
+                                           max_rails_between_cities=max_rails_between_cities,
+                                           max_rails_in_city=max_rails_in_city,
+                                           seed=seed_value  # Random seed
+                                           )
+    schedule_generator = sparse_schedule_generator(speed_data)
+
+    environment = RailEnv(width=width,
+                          height=height,
+                          rail_generator=rail_generator,
+                          number_of_agents=number_of_agents,
+                          schedule_generator=schedule_generator,
+                          remove_agents_at_target=True,
+                          malfunction_generator_and_process_data=single_malfunction_generator(
+                              earlierst_malfunction=earliest_malfunction,
+                              malfunction_duration=malfunction_duration)
+                          )
+    environment.reset(random_seed=seed_value)
+
+    return environment

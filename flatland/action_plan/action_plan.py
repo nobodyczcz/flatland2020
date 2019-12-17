@@ -20,6 +20,11 @@ ActionPlan = List[ActionPlanElement]
 # An action plan dict gathers all the actions for every agent identified by the dictionary key = agent_handle
 ActionPlanDict = Dict[int, ActionPlan]
 
+MalfunctionInActionPlan = NamedTuple('MalfunctionInActionPlan', [
+    ('time_step', int),
+    ('agent_id', int),
+    ('malfunction_duration', int)])
+
 
 class ControllerFromTrainruns():
     """Takes train runs, derives the actions from it and re-acts them."""
@@ -27,10 +32,17 @@ class ControllerFromTrainruns():
 
     def __init__(self,
                  env: RailEnv,
-                 trainrun_dict: Dict[int, Trainrun]):
+                 trainrun_dict: Dict[int, Trainrun],
+                 malfunctions: Optional[List[MalfunctionInActionPlan]] = None
+                 ):
 
         self.env: RailEnv = env
         self.trainrun_dict: Dict[int, Trainrun] = trainrun_dict
+        self.malfunctions: List[MalfunctionInActionPlan] = malfunctions if malfunctions is not None else []
+        self.malfunctions_dict: Dict[int, List[MalfunctionInActionPlan]] = {a.handle: [] for a in env.agents}
+        for m in self.malfunctions:
+            self.malfunctions_dict[m.agent_id].append(m)
+
         self.action_plan: ActionPlanDict = [self._create_action_plan_for_agent(agent_id, chosen_path)
                                             for agent_id, chosen_path in trainrun_dict.items()]
 
@@ -167,7 +179,8 @@ class ControllerFromTrainruns():
                     action_plan,
                     trainrun_waypoint,
                     next_trainrun_waypoint,
-                    minimum_cell_time
+                    minimum_cell_time,
+                    self.malfunctions_dict[agent_id]
                 )
                 continue
 
@@ -177,22 +190,25 @@ class ControllerFromTrainruns():
                 action_plan,
                 minimum_cell_time,
                 trainrun_waypoint,
-                next_trainrun_waypoint)
+                next_trainrun_waypoint,
+                self.malfunctions_dict[agent_id]
+            )
 
             # add a final element
             if just_before_target:
                 self._add_action_plan_elements_for_target_at_path_element_just_before_target(
                     action_plan,
                     minimum_cell_time,
-                    trainrun_waypoint,
-                    next_trainrun_waypoint)
+                    trainrun_waypoint)
         return action_plan
 
     def _add_action_plan_elements_for_current_path_element(self,
                                                            action_plan: ActionPlan,
                                                            minimum_cell_time: int,
                                                            trainrun_waypoint: TrainrunWaypoint,
-                                                           next_trainrun_waypoint: TrainrunWaypoint):
+                                                           next_trainrun_waypoint: TrainrunWaypoint,
+                                                           malfunctions: List[MalfunctionInActionPlan]
+                                                           ):
         scheduled_at = trainrun_waypoint.scheduled_at
         next_entry_value = next_trainrun_waypoint.scheduled_at
 
@@ -209,11 +225,14 @@ class ControllerFromTrainruns():
         # if the next entry is later than minimum_cell_time, then stop here and
         # move minimum_cell_time before the exit
         # we have to do this since agents in the RailEnv are processed in the step() in the order of their handle
-        if next_entry_value > scheduled_at + minimum_cell_time:
+        add_malfunction_time = self._get_additional_malfunction_time_for_interval(malfunctions, next_entry_value,
+                                                                                  scheduled_at)
+
+        if next_entry_value > scheduled_at + minimum_cell_time + add_malfunction_time:
             action = ActionPlanElement(scheduled_at, RailEnvActions.STOP_MOVING)
             action_plan.append(action)
 
-            action = ActionPlanElement(next_entry_value - minimum_cell_time, next_action)
+            action = ActionPlanElement(next_entry_value - minimum_cell_time - add_malfunction_time, next_action)
             action_plan.append(action)
         else:
             action = ActionPlanElement(scheduled_at, next_action)
@@ -222,8 +241,7 @@ class ControllerFromTrainruns():
     def _add_action_plan_elements_for_target_at_path_element_just_before_target(self,
                                                                                 action_plan: ActionPlan,
                                                                                 minimum_cell_time: int,
-                                                                                trainrun_waypoint: TrainrunWaypoint,
-                                                                                next_trainrun_waypoint: TrainrunWaypoint):
+                                                                                trainrun_waypoint: TrainrunWaypoint):
         scheduled_at = trainrun_waypoint.scheduled_at
 
         action = ActionPlanElement(scheduled_at + minimum_cell_time, RailEnvActions.STOP_MOVING)
@@ -233,7 +251,8 @@ class ControllerFromTrainruns():
                                                                   action_plan: ActionPlan,
                                                                   trainrun_waypoint: TrainrunWaypoint,
                                                                   next_trainrun_waypoint: TrainrunWaypoint,
-                                                                  minimum_cell_time: int):
+                                                                  minimum_cell_time: int,
+                                                                  malfunctions: List[MalfunctionInActionPlan]):
         scheduled_at = trainrun_waypoint.scheduled_at
         position = trainrun_waypoint.waypoint.position
         direction = trainrun_waypoint.waypoint.direction
@@ -256,10 +275,33 @@ class ControllerFromTrainruns():
                                           self.env.rail)
 
         # if the agent is blocked in the cell, we have to call stop upon entering!
-        if next_trainrun_waypoint.scheduled_at > scheduled_at + 1 + minimum_cell_time:
+
+        next_scheduled_at = next_trainrun_waypoint.scheduled_at
+        add_malfunction_time = self._get_additional_malfunction_time_for_interval(malfunctions, next_scheduled_at,
+                                                                                  scheduled_at)
+
+        if next_scheduled_at > scheduled_at + 1 + minimum_cell_time + add_malfunction_time:
             action = ActionPlanElement(scheduled_at + 1, RailEnvActions.STOP_MOVING)
             action_plan.append(action)
 
         # execute the action exactly minimum_cell_time before the entry into the next cell
-        action = ActionPlanElement(next_trainrun_waypoint.scheduled_at - minimum_cell_time, next_action)
+        action = ActionPlanElement(next_scheduled_at - minimum_cell_time - add_malfunction_time, next_action)
         action_plan.append(action)
+
+    def _get_additional_malfunction_time_for_interval(self, malfunctions, next_scheduled_at, scheduled_at):
+        malfunction_time = 0
+        for m in malfunctions:
+            step = m.time_step
+            if m.time_step >= scheduled_at and (
+                step + m.malfunction_duration) <= next_scheduled_at:
+                malfunction_time = m.malfunction_duration
+        return malfunction_time
+
+    def sanity_check_malfunctions(self):
+        for m in self.malfunctions:
+            for wp, next_wp in list(zip(self.trainrun_dict[m.agent_id], self.trainrun_dict[m.agent_id][1:])):
+                if m.time_step >= wp.scheduled_at and m.time_step <= next_wp.scheduled_at:
+                    minimum_running_time = 1 // self.env.agents[m.agent_id].speed_data['speed']
+                    if wp == self.trainrun_dict[m.agent_id][0]:
+                        minimum_running_time += 1
+                    assert wp.scheduled_at + minimum_running_time + m.malfunction_duration <= next_wp.scheduled_at
