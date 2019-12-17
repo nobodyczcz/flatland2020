@@ -69,6 +69,7 @@ class simple_flask_server(object):
         self.app = cls.app
         self.socketio = cls.socketio
         self.env = env
+        self.renderer_ready = False  # to indicate env background not yet drawn
 
     def run_flask_server(self, host='127.0.0.1'):
         self.socketio.run(simple_flask_server.app, host=host, port=8080)
@@ -131,6 +132,21 @@ class simple_flask_server(object):
                 'agents_static': llAgents
                 },
              broadcast=False)
+
+    @staticmethod
+    @socketio.on('renderEvent')
+    def handle_render_event(data):
+        cls=simple_flask_server
+        self = cls.instance
+        print('RenderEvent!!')
+        print('status: ' + data['status'])
+        print('message: ' + data['message'])
+
+        if data['status'] == 'listening':
+            self.renderer_ready = True
+    
+    def is_renderer_ready(self):
+        return self.renderer_ready
 
     def agents_to_list_dict(self):
         ''' Create a list of lists / dicts for serialisation

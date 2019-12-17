@@ -272,7 +272,14 @@ if False:
     env_renderer.reset()
 else:
     server.send_env()
-
+    for iAttempt in range(30):
+        if server.is_renderer_ready():
+            print("Background Render complete")
+            break
+        else:
+            print("Waiting for browser to signal that rendering complete")
+            time.sleep(1)
+            
 # Here you can also further enhance the provided observation by means of normalization
 # See training navigation example in the baseline repository
 
