@@ -132,6 +132,15 @@ class simple_flask_server(object):
                 'agents_static': llAgents
                 },
              broadcast=False)
+    
+    def send_env_and_wait(self):
+        for iAttempt in range(30):
+            if self.is_renderer_ready():
+                print("Background Render complete")
+                break
+            else:
+                print("Waiting for browser to signal that rendering complete")
+                time.sleep(1)
 
     @staticmethod
     @socketio.on('renderEvent')

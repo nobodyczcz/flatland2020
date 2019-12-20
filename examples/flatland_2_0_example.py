@@ -29,8 +29,19 @@ speed_ration_map = {1.: 0.25,  # Fast passenger train
                     1. / 3.: 0.25,  # Slow commuter train
                     1. / 4.: 0.25}  # Slow freight train
 
-env = RailEnv(width=100,
-              height=100,
+if True:
+    width = 30
+    height = 30
+    n_agents = 10
+else:
+    width = 100
+    height = 100
+    n_agents = 100
+
+
+
+env = RailEnv(width=width,
+              height=height,
               rail_generator=sparse_rail_generator(max_num_cities=30,
                                                    # Number of cities in map (where train stations are)
                                                    seed=14,  # Random seed
@@ -39,7 +50,7 @@ env = RailEnv(width=100,
                                                    max_rails_in_city=8,
                                                    ),
               schedule_generator=sparse_schedule_generator(speed_ration_map),
-              number_of_agents=100,
+              number_of_agents=n_agents,
               malfunction_generator_and_process_data=malfunction_from_params(stochastic_data),
               # Malfunction data generator
               obs_builder_object=GlobalObsForRailEnv(),
@@ -49,7 +60,7 @@ env = RailEnv(width=100,
 
 # RailEnv.DEPOT_POSITION = lambda agent, agent_handle : (agent_handle % env.height,0)
 
-env_renderer = RenderTool(env, gl="PILSVG",
+env_renderer = RenderTool(env,  # gl="PILSVG",
                           agent_render_variant=AgentRenderVariant.AGENT_SHOWS_OPTIONS_AND_BOX,
                           show_debug=True,
                           screen_height=1000,
@@ -131,6 +142,8 @@ for step in range(500):
     obs = next_obs.copy()
     if done['__all__']:
         break
+
+    time.sleep(0.1)
 
 print('Episode: Steps {}\t Score = {}'.format(step, score))
 env.save_episode("saved_episode_2.mpk")
