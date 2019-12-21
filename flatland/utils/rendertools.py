@@ -8,7 +8,7 @@ from numpy import array
 from recordtype import recordtype
 
 from flatland.utils.graphics_pil import PILGL, PILSVG
-
+from flatland.utils.flask_util import simple_flask_server
 
 # TODO: suggested renaming to RailEnvRenderTool, as it will only work with RailEnv!
 
@@ -21,6 +21,93 @@ class AgentRenderVariant(IntEnum):
 
 
 class RenderTool(object):
+    """ RenderTool is a facade to a renderer, either local or browser
+    """
+    def __init__(self, env, gl="BROWSER", jupyter=False,
+                 agent_render_variant=AgentRenderVariant.ONE_STEP_BEHIND,
+                 show_debug=False, clear_debug_text=True, screen_width=800, screen_height=600):
+
+        self.env = env
+        self.frame_nr = 0
+        self.start_time = time.time()
+        self.times_list = deque()
+
+        self.agent_render_variant = agent_render_variant
+
+        if gl in ["PIL", "PILSVG"]:
+            self.renderer = RenderLocal(env, gl, jupyter,
+                 agent_render_variant,
+                 show_debug, clear_debug_text, screen_width, screen_height)
+
+        elif gl == "BROWSER":
+            self.renderer = RenderBrowser(env)
+        else:
+            print("[", gl, "] not found, switch to PILSVG or FLASK (for browser)")
+
+    def render_env(self,
+                   show=False,  # whether to call matplotlib show() or equivalent after completion
+                   show_agents=True,  # whether to include agents
+                   show_observations=True,  # whether to include observations
+                   show_predictions=False,  # whether to include predictions
+                   frames=False,  # frame counter to show (intended since invocation)
+                   episode=None,  # int episode number to show
+                   step=None,  # int step number to show in image
+                   selected_agent=None):  # indicate which agent is "selected" in the editor):
+        self.renderer.render_env(show, show_agents, show_observations,
+                    show_predictions, frames, episode, step, selected_agent)
+
+    def close_window(self):
+        self.renderer.close_window()
+
+    def reset(self):
+        self.renderer.reset()
+
+
+
+class RenderBase(object):
+    def __init__(self, env):
+        pass
+
+    def render_env(self):
+        pass
+
+    def close_window(self):
+        pass
+
+    def reset(self):
+        pass
+
+
+class RenderBrowser(RenderBase):
+    def __init__(self, env):
+        self.server = simple_flask_server(env)
+        self.server.run_flask_server_in_thread()
+        self.env = env
+        self.background_rendered = False
+
+    def render_env(self,
+            show=False,  # whether to call matplotlib show() or equivalent after completion
+            show_agents=True,  # whether to include agents
+            show_observations=True,  # whether to include observations
+            show_predictions=False,  # whether to include predictions
+            frames=False,  # frame counter to show (intended since invocation)
+            episode=None,  # int episode number to show
+            step=None,  # int step number to show in image
+            selected_agent=None):  # indicate which agent is "selected" in the editor):
+        if self.background_rendered:
+            self.server.send_actions({})
+        else:
+            self.server.send_env_and_wait()
+            self.background_rendered = True
+
+    def close_window(self):
+        pass
+
+    def reset(self):
+        pass
+
+
+class RenderLocal(RenderBase):
     """ Class to render the RailEnv and agents.
         Uses two layers, layer 0 for rails (mostly static), layer 1 for agents etc (dynamic)
         The lower / rail layer 0 is only redrawn after set_new_rail() has been called.
@@ -54,8 +141,10 @@ class RenderTool(object):
             self.gl = PILGL(env.width, env.height, jupyter, screen_width=screen_width, screen_height=screen_height)
         elif gl == "PILSVG":
             self.gl = PILSVG(env.width, env.height, jupyter, screen_width=screen_width, screen_height=screen_height)
+        elif gl == "FLASK":
+            self.gl = GLFLASK(env.width, env.height, jupyter, screen_width=screen_width, screen_height=screen_height)
         else:
-            print("[", gl, "] not found, switch to PILSVG")
+            print("[", gl, "] not found, switch to PILSVG or FLASK (for browser)")
             self.gl = PILSVG(env.width, env.height, jupyter, screen_width=screen_width, screen_height=screen_height)
 
         self.new_rail = True

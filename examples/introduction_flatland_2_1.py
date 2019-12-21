@@ -145,7 +145,7 @@ env = RailEnv(width=width,
 env.reset()
 
 # Initiate the renderer
-env_renderer = RenderTool(env, gl="PILSVG",
+env_renderer = RenderTool(env,  # gl="PILSVG",
                           agent_render_variant=AgentRenderVariant.ONE_STEP_BEHIND,
                           show_debug=False,
                           screen_height=600,  # Adjust these parameters to fit your resolution
