@@ -8,6 +8,8 @@ import os
 import time
 import webbrowser
 import numpy as np
+import typing
+import socket
 
 from flatland.envs.rail_env import RailEnv, RailEnvActions
 
@@ -70,9 +72,11 @@ class simple_flask_server(object):
         self.socketio = cls.socketio
         self.env = env
         self.renderer_ready = False  # to indicate env background not yet drawn
+        self.port = None  # we only assign a port once we start the background server...
 
     def run_flask_server(self, host='127.0.0.1'):
-        self.socketio.run(simple_flask_server.app, host=host, port=8080)
+        self.port = self._find_available_port()
+        self.socketio.run(simple_flask_server.app, host=host, port=self.port)
     
     def run_flask_server_in_thread(self):
         # daemon=True so that this thread exits when the main / foreground thread exits,
@@ -83,9 +87,27 @@ class simple_flask_server(object):
         time.sleep(1)
     
     def open_browser(self):
-        webbrowser.open("http://127.0.0.1:8080")
+        webbrowser.open("http://localhost:{}".format(self.port))
         # short sleep to allow browser to request the page etc (may be unnecessary)
         time.sleep(1)
+    
+    def _test_listen_port(self, port: int):
+        oSock = socket.socket()
+        try:
+            oSock.bind(("localhost", port))
+        except OSError:
+            return False  # The port is not available
+
+        del oSock  # This should release the port        
+        return True  # The port is available
+
+    def _find_available_port(self):
+        for nPort in range(8080, 8100):
+            if self._test_listen_port(nPort):
+                return nPort
+        print("Could not find an available port for Flask to listen on!")
+        return None
+
 
     @app.route('/', methods=['GET'])
     def home():
@@ -121,6 +143,12 @@ class simple_flask_server(object):
         '''
         llAgents = self.agents_to_list()
         self.socketio.emit('agentsAction', {'actions': llAgents})
+
+    def send_observation(self, agent_handles, dict_obs):
+        """ Send an observation.  
+            TODO: format observation message.
+        """
+        self.socketio.emit("observation", {"agents": agent_handles, "observations": dict_obs})
 
     def send_env(self):
         """ Sends the env, ie the rail grid, and the agents (static) information

@@ -38,11 +38,15 @@ class RenderTool(object):
             self.renderer = RenderLocal(env, gl, jupyter,
                  agent_render_variant,
                  show_debug, clear_debug_text, screen_width, screen_height)
+            
+            # To support legacy access to the GraphicsLayer (gl)
+            # DEPRECATED - TODO: remove these calls!
+            self.gl = self.renderer.gl
 
         elif gl == "BROWSER":
             self.renderer = RenderBrowser(env)
         else:
-            print("[", gl, "] not found, switch to PILSVG or FLASK (for browser)")
+            print("[", gl, "] not found, switch to PILSVG or BROWSER")
 
     def render_env(self,
                    show=False,  # whether to call matplotlib show() or equivalent after completion
@@ -61,7 +65,12 @@ class RenderTool(object):
 
     def reset(self):
         self.renderer.reset()
-
+    
+    def get_endpoint_URL(self):
+        """ Returns a string URL for the root of the HTTP server
+            TODO: Need to update this work work on a remote server!  May be tricky...
+        """
+        return "http://localhost:{}".format(self.renderer.get_port())
 
 
 class RenderBase(object):
@@ -94,11 +103,25 @@ class RenderBrowser(RenderBase):
             episode=None,  # int episode number to show
             step=None,  # int step number to show in image
             selected_agent=None):  # indicate which agent is "selected" in the editor):
-        if self.background_rendered:
-            self.server.send_actions({})
-        else:
+        
+        if not self.background_rendered:
             self.server.send_env_and_wait()
             self.background_rendered = True
+        
+        self.server.send_actions({})
+
+        if show_observations:
+            self.render_observation(range(self.env.get_num_agents()), self.env.dev_obs_dict)
+    
+    def render_observation(self, agent_handles, dict_observation):
+        # Change keys to strings, and OrderedSet to list (of tuples)
+        dict_obs2 = {str(item[0]): list(item[1]) for item in self.env.dev_obs_dict.items()}
+        # Convert any ranges into a list
+        list_handles = list(agent_handles)
+        self.server.send_observation(list_handles, dict_obs2)
+
+    def get_port(self):
+        return self.server.port
 
     def close_window(self):
         pass
@@ -141,10 +164,8 @@ class RenderLocal(RenderBase):
             self.gl = PILGL(env.width, env.height, jupyter, screen_width=screen_width, screen_height=screen_height)
         elif gl == "PILSVG":
             self.gl = PILSVG(env.width, env.height, jupyter, screen_width=screen_width, screen_height=screen_height)
-        elif gl == "FLASK":
-            self.gl = GLFLASK(env.width, env.height, jupyter, screen_width=screen_width, screen_height=screen_height)
         else:
-            print("[", gl, "] not found, switch to PILSVG or FLASK (for browser)")
+            print("[", gl, "] not found, switch to PILSVG or BROWSER")
             self.gl = PILSVG(env.width, env.height, jupyter, screen_width=screen_width, screen_height=screen_height)
 
         self.new_rail = True
