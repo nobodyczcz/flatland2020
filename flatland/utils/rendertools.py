@@ -72,6 +72,16 @@ class RenderTool(object):
         """
         return "http://localhost:{}".format(self.renderer.get_port())
 
+    def get_image(self):
+        """ 
+        """
+        if hasattr(self.renderer, "gl"):
+            return self.renderer.gl.get_image()
+        else:
+            print("Attempt to retrieve image from RenderTool - not supported with BROWSER")
+            return None
+
+
 
 class RenderBase(object):
     def __init__(self, env):
