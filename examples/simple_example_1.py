@@ -28,7 +28,7 @@ env.reset()
 # You can re-run this cell to take another step.
 # In this example the agent terminates after just 2 or 3 steps.
 env.step({0: RailEnvActions.MOVE_FORWARD})
-env_renderer = RenderTool(env)
+env_renderer = RenderTool(env, gl="TKPIL")
 env_renderer.render_env(show=not in_notebook, show_predictions=False, show_observations=False)
 if in_notebook:
     arrImage = env_renderer.get_image()

@@ -60,7 +60,7 @@ env = RailEnv(width=width,
 
 # RailEnv.DEPOT_POSITION = lambda agent, agent_handle : (agent_handle % env.height,0)
 
-env_renderer = RenderTool(env,  # gl="PILSVG",
+env_renderer = RenderTool(env,  gl="TKPILSVG",
                           agent_render_variant=AgentRenderVariant.AGENT_SHOWS_OPTIONS_AND_BOX,
                           show_debug=True,
                           screen_height=1000,

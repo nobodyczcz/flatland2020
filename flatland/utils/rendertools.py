@@ -34,7 +34,7 @@ class RenderTool(object):
 
         self.agent_render_variant = agent_render_variant
 
-        if gl in ["PIL", "PILSVG"]:
+        if gl in ["PIL", "PILSVG", "TKPIL", "TKPILSVG"]:
             self.renderer = RenderLocal(env, gl, jupyter,
                  agent_render_variant,
                  show_debug, clear_debug_text, screen_width, screen_height)
@@ -170,12 +170,19 @@ class RenderLocal(RenderBase):
 
         self.agent_render_variant = agent_render_variant
 
+        self.gl_str = gl
+
         if gl == "PIL":
             self.gl = PILGL(env.width, env.height, jupyter, screen_width=screen_width, screen_height=screen_height)
         elif gl == "PILSVG":
             self.gl = PILSVG(env.width, env.height, jupyter, screen_width=screen_width, screen_height=screen_height)
+        elif gl in ["TKPILSVG", "TKPIL"]:
+            # Conditional import to avoid importing tkinter unless required.
+            print("Importing TKPILGL - requires a local display!")
+            from flatland.utils.graphics_tkpil import TKPILGL
+            self.gl = TKPILGL(env.width, env.height, jupyter, screen_width=screen_width, screen_height=screen_height)
         else:
-            print("[", gl, "] not found, switch to PILSVG or BROWSER")
+            print("[", gl, "] not found, switch to PILSVG, TKPIL or BROWSER")
             self.gl = PILSVG(env.width, env.height, jupyter, screen_width=screen_width, screen_height=screen_height)
 
         self.new_rail = True
@@ -530,7 +537,9 @@ class RenderLocal(RenderBase):
         """ Draw the environment using the GraphicsLayer this RenderTool was created with.
             (Use show=False from a Jupyter notebook with %matplotlib inline)
         """
-        if type(self.gl) is PILSVG:
+
+        # if type(self.gl) is PILSVG:
+        if self.gl_str in ["PILSVG", "TKPIL", "TKPILSVG"]:
             self.render_env_svg(show=show,
                                 show_observations=show_observations,
                                 show_predictions=show_predictions,

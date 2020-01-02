@@ -19,7 +19,7 @@ try:
 except(NameError):
     in_notebook = False 
 
-
+print("in_notebook", in_notebook)
 random.seed(100)
 np.random.seed(100)
 
@@ -42,7 +42,7 @@ env = RailEnv(width=10, height=10,
               number_of_agents=3)
 
 env.reset()
-env_renderer = RenderTool(env, gl="PIL")
+env_renderer = RenderTool(env)  # , gl="TKPIL")
 env_renderer.render_env(show=not in_notebook)
 
 # uncomment to keep the renderer open
@@ -55,6 +55,6 @@ if in_notebook:
     display(pilImage)
 else:
     # if running bare python, keep the TK window open for a short time before exiting
-    time.sleep(1)
+    time.sleep(5)
     # uncomment to keep the renderer open
     # input("Press Enter to continue...")

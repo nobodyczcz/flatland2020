@@ -1,7 +1,7 @@
 import io
 import os
 import time
-import tkinter as tk
+#import tkinter as tk
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageTk, ImageFont
@@ -32,7 +32,7 @@ from flatland.core.grid.rail_env_grid import RailEnvTransitions  # noqa: E402
 class PILGL(GraphicsLayer):
     # tk.Tk() must be a singleton!
     # https://stackoverflow.com/questions/26097811/image-pyimage2-doesnt-exist
-    window = tk.Tk()
+    # window = tk.Tk()
 
     RAIL_LAYER = 0
     PREDICTION_PATH_LAYER = 1
@@ -85,7 +85,7 @@ class PILGL(GraphicsLayer):
         self.agent_colors = [self.rgb_s2i(sColor) for sColor in sColors.split("#")]
         self.n_agent_colors = len(self.agent_colors)
 
-        self.window_open = False
+        # self.window_open = False
         self.firstFrame = True
         self.old_background_image = (None, None, None)
         self.create_layers()
@@ -164,15 +164,10 @@ class PILGL(GraphicsLayer):
         self.draw_image_xy(pil_img, xyPixLeftTop, layer=layer)
 
     def open_window(self):
-        assert self.window_open is False, "Window is already open!"
-        self.__class__.window.title("Flatland")
-        self.__class__.window.configure(background='grey')
-        self.window_open = True
+        pass
 
     def close_window(self):
-        self.panel.destroy()
-        # quit but not destroy!
-        self.__class__.window.quit()
+        pass
 
     def text(self, xPx, yPx, strText, layer=RAIL_LAYER):
         xyPixLeftTop = (xPx, yPx)
@@ -194,24 +189,7 @@ class PILGL(GraphicsLayer):
         self.create_layer(iLayer=PILGL.PREDICTION_PATH_LAYER, clear=True)
 
     def show(self, block=False):
-        img = self.alpha_composite_layers()
-
-        if not self.window_open:
-            self.open_window()
-
-        tkimg = ImageTk.PhotoImage(img)
-
-        if self.firstFrame:
-            # Do TK actions for a new panel (not sure what they really do)
-            self.panel = tk.Label(self.window, image=tkimg)
-            self.panel.pack(side="bottom", fill="both", expand="yes")
-        else:
-            # update the image in situ
-            self.panel.configure(image=tkimg)
-            self.panel.image = tkimg
-
-        self.__class__.window.update()
-        self.firstFrame = False
+        print("show() - ", self.__class__)
 
     def pause(self, seconds=0.00001):
         pass
