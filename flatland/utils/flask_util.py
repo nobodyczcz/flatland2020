@@ -73,15 +73,23 @@ class simple_flask_server(object):
         self.env = env
         self.renderer_ready = False  # to indicate env background not yet drawn
         self.port = None  # we only assign a port once we start the background server...
+        self.host = None
 
-    def run_flask_server(self, host='127.0.0.1'):
-        self.port = self._find_available_port()
+    def run_flask_server(self, host='127.0.0.1', port=None):
+        if port is None:
+            self.port = self._find_available_port()
+        else:
+            self.port = port
+        self.host = host            
         self.socketio.run(simple_flask_server.app, host=host, port=self.port)
     
-    def run_flask_server_in_thread(self):
+    def run_flask_server_in_thread(self,  host="127.0.0.1", port=None):
         # daemon=True so that this thread exits when the main / foreground thread exits,
         # usually when the episode finishes.
-        self.thread = threading.Thread(target=self.run_flask_server, daemon=True)
+        self.thread = threading.Thread(
+            target=self.run_flask_server, 
+            kwargs={"host": host, "port": port}, 
+            daemon=True)
         self.thread.start()
         # short sleep to allow thread to start (may be unnnecessary)
         time.sleep(1)
@@ -108,6 +116,8 @@ class simple_flask_server(object):
         print("Could not find an available port for Flask to listen on!")
         return None
 
+    def get_endpoint_url(self):
+        return "http://{}:{}".format(self.host, self.port)
 
     @app.route('/', methods=['GET'])
     def home():

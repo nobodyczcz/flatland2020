@@ -25,7 +25,8 @@ class RenderTool(object):
     """
     def __init__(self, env, gl="BROWSER", jupyter=False,
                  agent_render_variant=AgentRenderVariant.ONE_STEP_BEHIND,
-                 show_debug=False, clear_debug_text=True, screen_width=800, screen_height=600):
+                 show_debug=False, clear_debug_text=True, screen_width=800, screen_height=600,
+                 host="localhost", port=None):
 
         self.env = env
         self.frame_nr = 0
@@ -44,7 +45,7 @@ class RenderTool(object):
             self.gl = self.renderer.gl
 
         elif gl == "BROWSER":
-            self.renderer = RenderBrowser(env)
+            self.renderer = RenderBrowser(env, host=host, port=port)
         else:
             print("[", gl, "] not found, switch to PILSVG or BROWSER")
 
@@ -70,7 +71,12 @@ class RenderTool(object):
         """ Returns a string URL for the root of the HTTP server
             TODO: Need to update this work work on a remote server!  May be tricky...
         """
-        return "http://localhost:{}".format(self.renderer.get_port())
+        #return "http://localhost:{}".format(self.renderer.get_port())
+        if hasattr(self.renderer, "get_endpoint_url"):
+            return self.renderer.get_endpoint_url()
+        else:
+            print("Attempt to get_endpoint_url from RenderTool - only supported with BROWSER")
+            return None
 
     def get_image(self):
         """ 
@@ -98,9 +104,9 @@ class RenderBase(object):
 
 
 class RenderBrowser(RenderBase):
-    def __init__(self, env):
+    def __init__(self, env, host="localhost", port=None):
         self.server = simple_flask_server(env)
-        self.server.run_flask_server_in_thread()
+        self.server.run_flask_server_in_thread(host=host, port=port)
         self.env = env
         self.background_rendered = False
 
@@ -132,6 +138,9 @@ class RenderBrowser(RenderBase):
 
     def get_port(self):
         return self.server.port
+    
+    def get_endpoint_url(self):
+        return self.server.get_endpoint_url()
 
     def close_window(self):
         pass
