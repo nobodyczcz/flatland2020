@@ -24,3 +24,6 @@ gym==0.14.0
 flask
 flask_cors
 flask_socketio
+pandas
+ipysheet
+
