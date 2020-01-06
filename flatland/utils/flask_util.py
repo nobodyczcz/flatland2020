@@ -76,11 +76,13 @@ class simple_flask_server(object):
         self.host = None
 
     def run_flask_server(self, host='127.0.0.1', port=None):
+        self.host = host
+
         if port is None:
-            self.port = self._find_available_port()
+            self.port = self._find_available_port(host)
         else:
             self.port = port
-        self.host = host            
+                    
         self.socketio.run(simple_flask_server.app, host=host, port=self.port)
     
     def run_flask_server_in_thread(self,  host="127.0.0.1", port=None):
@@ -99,19 +101,19 @@ class simple_flask_server(object):
         # short sleep to allow browser to request the page etc (may be unnecessary)
         time.sleep(1)
     
-    def _test_listen_port(self, port: int):
+    def _test_listen_port(self, host: str, port: int):
         oSock = socket.socket()
         try:
-            oSock.bind(("localhost", port))
+            oSock.bind((host, port))
         except OSError:
             return False  # The port is not available
 
         del oSock  # This should release the port        
         return True  # The port is available
 
-    def _find_available_port(self):
-        for nPort in range(8080, 8100):
-            if self._test_listen_port(nPort):
+    def _find_available_port(self, host: str, port_start: int = 8080):
+        for nPort in range(port_start, port_start+100):
+            if self._test_listen_port(host, nPort):
                 return nPort
         print("Could not find an available port for Flask to listen on!")
         return None
