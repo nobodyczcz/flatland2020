@@ -25,4 +25,5 @@ flask_cors
 flask_socketio
 pandas
 ipysheet
+ipycanvas
 
