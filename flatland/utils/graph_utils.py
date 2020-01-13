@@ -62,7 +62,6 @@ def neighbors(G, nbunch, edge_types=None, outer_edge_types=None):
     else:
         outer_edge_types = ["grid", "hold", "dir"]
     
-    
     for u in nbunch:
         for v in G.adj[u]:
             edge_type = G.adj[u][v]["type"]
@@ -82,10 +81,13 @@ def neighbors(G, nbunch, edge_types=None, outer_edge_types=None):
 
     return lnNeighbors, lEdges
 
+def grid_node_for_rails(G, nbunch):
+    for n in nbunch:
+        G.pred
 
 def get_simple_path(G, u):
     visited = OrderedDict()
-    visited[u]=1
+    visited[u] = 1
     v = u
     while True: 
         lSucc = list(G.successors(v))
@@ -111,7 +113,7 @@ def plotGraphEnv(G, env, aImg, space=0.3, figsize=(12,8),
         plt.figure(figsize=figsize)
         
     rows, cols = env.rail.grid.shape
-    plt.imshow(aImg, extent=(-.5,cols-.5,.5-rows,0.5), alpha=0.3 )
+    plt.imshow(aImg, extent=(-.5,cols-.5,.5-rows,0.5), alpha=alpha_img)
     
     if show_nodes == "all":
         nodelist = G.nodes()
@@ -292,12 +294,15 @@ class RailEnvGraph(object):
                 continue
             igComp = nx.induced_subgraph(G4,nSet)
             #print("deg:", igComp.degree)
+            # The "inner" nodes excluding the ends
             lnInner = [ n for n,d in igComp.degree if d==4 ]
             #print("inner:", lnInner)
             
             #igCompRail = nx.induced_subgraph(G4d, )
             #lnInnerRails = [ n for n,d in nx.induce]
             
+            # Find the ends of the chain of grid nodes by their degree of 2
+            # (The undirected edges created in the grid are counted twice in this DiGraph)
             lnEnds = [ n for n,d in igComp.degree if d==2 ]
             #print("ends:", lnEnds)
             
@@ -308,15 +313,22 @@ class RailEnvGraph(object):
             lnPathStart = []
             lnPathEnd = []
             
-            for grid_end in lnEnds: # look at each end of this grid path
+            # We now need to remove both directions of rail nodes.
+            # First find the start and end of each rail chain.
+            # look at each end of this grid path
+            for grid_end in lnEnds:
                 #grid_end = lnEnds[0] # look at the first end
                 #print("grid_end", grid_end)
                 path_start = None
+
+                # Look at all the adjacent nodes to this (grid) end
                 for rail_end in G4e.adj[grid_end]: # look at the rail at this end
                     #print("rail_end", rail_end, G4e.adj[grid_end][rail_end])
                     if G4e.adj[grid_end][rail_end]["type"] == "hold":  # select rail, discard grid
                         #print(rail_end)
                         outedges = G4e.edges([rail_end])
+
+                        # If it has 1 outedge, it's the start, otherwise (0) means it's the end
                         if len(outedges)==1:
                             #print("outedges", outedges)
                             lnPathStart.append(rail_end)
@@ -338,7 +350,10 @@ class RailEnvGraph(object):
             
             # Join up (identify, ie make identical) the ends of the grid chain into a single node
             G3c = nx.minors.contracted_nodes(G3c, *lnEnds, self_loops=False)
-            G5 = nx.minors.contracted_nodes(G5, *lnEnds, self_loops=False) 
+            G5 = nx.minors.contracted_nodes(G5, *lnEnds, self_loops=False)
+
+            # Record the length of the simple path we have removed
+            G5.nodes()[lnEnds[0]]["l"] = len(lnInner)+2
 
         return G5
 
