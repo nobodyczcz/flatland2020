@@ -1,0 +1,63 @@
+<head>
+	  <style> body { margin: 0; } </style>
+
+	    <script src="./three.js"></script>
+	    <script src="./three-spritetext.min.js"></script>
+
+	    <script src="./3d-force-graph.min.js"></script>
+		  <!--<script src="../../dist/3d-force-graph.js"></script>-->
+</head>
+
+<body>
+	  <div id="3d-graph"></div>
+
+	<script>
+			
+	var url = new URL(window.location);
+	var sFile = url.searchParams.get("file");
+	console.log("loading file:", sFile)
+	
+	const Graph = ForceGraph3D()
+      (document.getElementById('3d-graph'))
+		.jsonUrl(sFile)
+		//.jsonUrl('./miserables.json')
+        .nodeAutoColorBy('type')
+        .nodeThreeObject(node => {
+		          // use a sphere as a drag handle
+		          const obj = new THREE.Mesh(
+				              new THREE.SphereGeometry(node.size || 15),
+				              new THREE.MeshLambertMaterial(
+								  { depthWrite: false, 
+									transparent: true,
+									opacity: 1,
+									color:node.color })
+				            );
+				  if (true) {
+					//const sprite = new SpriteText(node.name); // node.id
+		          	// add text sprite as child
+				  	const sprite = new SpriteText(String(node.id)); // node.id
+
+					// sprite.color = node.color;
+					sprite.textHeight = 8;
+					obj.add(sprite);
+					obj.color = node.color;
+				  }
+		          return obj;
+				})
+		.onNodeDragEnd(node => {
+          node.fx = node.x;
+          node.fy = node.y;
+          node.fz = node.z; })
+		.linkWidth(5)
+		.cooldownTime(3000)
+		.d3AlphaDecay(0.001)
+		.linkDirectionalArrowLength(20)
+		.linkDirectionalArrowRelPos(1)
+		.backgroundColor("#ffffff");
+
+    // Spread nodes a little wider
+    Graph.d3Force('charge').strength(-120);
+  </script>
+</body>
+
+
