@@ -181,7 +181,7 @@ class RailEnvGraph(object):
         # we use directed because we need directed edges to represent the agent/train direction
         self.G = nx.grid_2d_graph(*env.rail.grid.shape).to_directed()
 
-        # give all these nodes a type of grid.
+        # give all these nodes and edges a type of grid.
         nx.set_node_attributes(self.G, name="type", values="grid")
         nx.set_edge_attributes(self.G, name="type", values="grid")
 
