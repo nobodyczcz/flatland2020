@@ -139,7 +139,7 @@ class View(object):
     def new_env(self):
         """ Tell the view to update its graphics when a new env is created.
         """
-        self.oRT = rt.RenderTool(self.editor.env, gl=self.sGL)
+        self.oRT = rt.RenderTool(self.editor.env, gl=self.sGL, show_debug=True)
 
     def redraw(self):
         with self.output_generator:
@@ -155,7 +155,8 @@ class View(object):
                                 show_inactive_agents=True,
                                 show=False,
                                 selected_agent=self.model.selected_agent,
-                                show_observations=False)
+                                show_observations=False,
+                                )
             img = self.oRT.get_image()
 
             self.wImage.data = img
@@ -181,7 +182,9 @@ class View(object):
         nY = np.floor((self.yxSize[1] - self.yxBase[1]) / self.model.env.width)
         rc_cell[0] = max(0, min(np.floor(rc_cell[0] / nY), self.model.env.height - 1))
         rc_cell[1] = max(0, min(np.floor(rc_cell[1] / nX), self.model.env.width - 1))
-        return rc_cell
+
+        # Using numpy arrays for coords not currently supported downstream in the env, observations, etc
+        return tuple(rc_cell)
 
     def log(self, *args, **kwargs):
         if self.output_generator:
@@ -695,14 +698,22 @@ class EditorModel(object):
         # Has the user clicked on an existing agent?
         agent_idx = self.find_agent_at(cell_row_col)
 
+        # This is in case we still have a selected agent even though the env has been recreated
+        # with no agents.
+        if (self.selected_agent is not None) and (self.selected_agent > len(self.env.agents)):
+            self.selected_agent = None
+
+        # Defensive coding below - for cell_row_col to be a tuple, not a numpy array:
+        # numpy array breaks various things when loading the env.
+
         if agent_idx is None:
             # No
             if self.selected_agent is None:
                 # Create a new agent and select it.
-                agent = EnvAgent(initial_position=cell_row_col,
+                agent = EnvAgent(initial_position=tuple(cell_row_col),
                     initial_direction=0, 
                     direction=0,
-                    target=cell_row_col, 
+                    target=tuple(cell_row_col), 
                     moving=False,
                     )
                 self.selected_agent = self.env.add_agent(agent)
@@ -711,9 +722,9 @@ class EditorModel(object):
             else:
                 # Move the selected agent to this cell
                 agent = self.env.agents[self.selected_agent]
-                agent.initial_position = cell_row_col
-                agent.position = cell_row_col
-                agent.old_position = cell_row_col
+                agent.initial_position = tuple(cell_row_col)
+                agent.position = tuple(cell_row_col)
+                agent.old_position = tuple(cell_row_col)
         else:
             # Yes
             # Have they clicked on the agent already selected?
@@ -728,7 +739,7 @@ class EditorModel(object):
 
     def add_target(self, rc_cell):
         if self.selected_agent is not None:
-            self.env.agents[self.selected_agent].target = rc_cell
+            self.env.agents[self.selected_agent].target = tuple(rc_cell)
             self.view.oRT.update_background()
             self.redraw()
 

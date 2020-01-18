@@ -26,6 +26,16 @@ def test_load_env():
     assert env.get_num_agents() == 1
 
 
+def test_load_env2():
+    env = RailEnv(20, 20)
+    
+    env.reset()
+    env.load_resource('env_data.tests', 'g1_env.pkl')
+    env.reset_agents()
+    env.reset(False, False)
+    assert env.get_num_agents() == 3
+
+
 def test_save_load():
     env = RailEnv(width=10, height=10,
                   rail_generator=complex_rail_generator(nr_start_goal=2, nr_extra=5, min_dist=6, seed=1),
