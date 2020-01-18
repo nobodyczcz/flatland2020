@@ -152,6 +152,7 @@ class View(object):
                     a.old_direction = a.direction
 
             self.oRT.render_env(show_agents=True,
+                                show_inactive_agents=True,
                                 show=False,
                                 selected_agent=self.model.selected_agent,
                                 show_observations=False)
@@ -282,11 +283,14 @@ class Controller(object):
         else:
             self.lrcStroke = []
 
-        if self.model.selected_agent is not None:
-            self.lrcStroke = []
-            while len(q_events) > 0:
-                t, x, y = q_events.popleft()
-            return
+        # JW: I think this clause causes all editing to fail once an agent is selected.
+        # I also can't see why it's necessary.  So I've if-falsed it out.
+        if False:
+            if self.model.selected_agent is not None:
+                self.lrcStroke = []
+                while len(q_events) > 0:
+                    t, x, y = q_events.popleft()
+                return
 
         # Process the events in our queue:
         # Draw a black square to indicate a trail
@@ -330,7 +334,8 @@ class Controller(object):
                 if agent is None:
                     continue
                 if agent_idx == self.model.selected_agent:
-                    agent.direction = (agent.direction + 1) % 4
+                    agent.initial_direction = (agent.initial_direction + 1) % 4
+                    agent.direction = agent.initial_direction
                     agent.old_direction = agent.direction
         self.model.redraw()
 
@@ -658,6 +663,7 @@ class EditorModel(object):
             self.env = env
         self.env.reset(regenerate_rail=True)
         self.fix_env()
+        self.selected_agent = None  # clear the selected agent.
         self.set_env(self.env)
         self.view.new_env()
         self.redraw()
@@ -670,7 +676,11 @@ class EditorModel(object):
 
     def find_agent_at(self, cell_row_col):
         for agent_idx, agent in enumerate(self.env.agents):
-            if tuple(agent.position) == tuple(cell_row_col):
+            if agent.position is None:
+                rc_pos = agent.initial_position
+            else:
+                rc_pos = agent.position
+            if tuple(rc_pos) == tuple(cell_row_col):
                 return agent_idx
         return None
 
@@ -692,12 +702,16 @@ class EditorModel(object):
                 agent = EnvAgent(initial_position=cell_row_col,
                     initial_direction=0, 
                     direction=0,
-                    target=cell_row_col, moving=False)
+                    target=cell_row_col, 
+                    moving=False,
+                    )
                 self.selected_agent = self.env.add_agent(agent)
+                # self.env.set_agent_active(agent)
                 self.view.oRT.update_background()
             else:
                 # Move the selected agent to this cell
                 agent = self.env.agents[self.selected_agent]
+                agent.initial_position = cell_row_col
                 agent.position = cell_row_col
                 agent.old_position = cell_row_col
         else:

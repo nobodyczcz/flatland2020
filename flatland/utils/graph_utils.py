@@ -86,6 +86,10 @@ def grid_node_for_rails(G, nbunch):
         G.pred
 
 def get_simple_path(G, u):
+    """ Follow a linear path in G starting at u, terminating as soon as there is 
+        more than (or less than) 1 successor, ie when the linear section ends.
+        The branching node is not included.
+    """
     visited = OrderedDict()
     visited[u] = 1
     v = u
@@ -217,9 +221,19 @@ class RailEnvGraph(object):
                         if b44[dirIn, dirOut]:
                             # get the rowcol of the destination cell
                             rcOut = tuple(array(rcIn) + gDirs[dirOut])
-                            self.G.add_edge((*rcIn, dirIn), (*rcOut, dirOut), type="dir")
+                            self.G.add_edge((*rcIn, dirIn), (*rcOut, dirOut), type="dir", l=1)
 
     def graph_rail_grid(self):
+        """ returns a NX graph of rails only; includes:
+            - grid nodes with rails
+            - grid edges between grid nodes along rails (but not between adjacent rails)
+            - rail nodes
+            - hold edges
+            - dir edges
+            Excludes:
+            - Grid nodes associated with empty rails
+            - grid edges with empty grid nodes
+        """
         G2 = nx.DiGraph()
 
         # Add the rail nodes and their direction edges.
@@ -269,23 +283,40 @@ class RailEnvGraph(object):
         return G2
 
     def reduce_simple_paths(self):
+        """
+        Reduce *linear* paths, ie unbranched chains, into a single node, 
+        preserving length in the edges "l" property
+        """
+
+        # Get the grid + rail nodes only, ie remove empty cells.
         G2 = self.graph_rail_grid()
+
+        # G3 is just the grid nodes for cells with rails
         G3 = nx.induced_subgraph(G2, [ n for n, d in G2.nodes(data=True) if d["type"]=="grid" ])
+
+        # It seems we need to copy a subgraph to really get rid of the unwanted nodes
         G3b = G3.copy()
-        G3bDeg = G3b.degree
+
+        # G4 is a subgraph consisting only of the grid nodes with only 2 neighbours
         lnGridSimple = [ n for n, d in G3b.nodes(data=True) if G3b.degree[n]==4 ]
         G4 = G3b.subgraph(lnGridSimple)  # copies the nodes + data, and the (grid) edges + data.
+
+        # Get the rail nodes (held by hold edges) and edges and their dir edges
         lnRails, lEdges = neighbors(G2, G4.nodes(), edge_types="hold", outer_edge_types="dir")
         G4d = G4.copy()
+
+        # Add these into G4d
         #G4d.add_nodes_from(G2.subgraph(lnRails))  # doesn't copy data
         # lnRails just has the node ids; use subgraph and .nodes to pull the data from G2.
         G4d.add_nodes_from(list(G2.subgraph(lnRails).nodes(data=True)))
         G4d.add_edges_from(lEdges)
 
-        G3c = G3b.copy() # grid nodes 
-        G4e = G4d.copy() # the simple paths augmented with rails
-        G5 = G2.copy() # the full graph, mutable, so we can remove things:
+        G3c = G3b.copy()  # grid nodes 
+        G4e = G4d.copy()  # the simple paths augmented with rails
+        G5 = G2.copy()  # the full graph, mutable, so we can remove things:
         #print (G4.degree)
+
+        # Iterate over all the linear paths (which are disconnected from each other in G4)
         for nSet in nx.components.strongly_connected_components(G4): # G4 is the grid simple paths
             #print("comp:", nSet)
             
@@ -293,8 +324,9 @@ class RailEnvGraph(object):
             if len(nSet)==1:
                 continue
             igComp = nx.induced_subgraph(G4,nSet)
+
             #print("deg:", igComp.degree)
-            # The "inner" nodes excluding the ends
+            # The "inner" nodes (degree=4) excluding the ends (degree=2)
             lnInner = [ n for n,d in igComp.degree if d==4 ]
             #print("inner:", lnInner)
             
@@ -306,10 +338,14 @@ class RailEnvGraph(object):
             lnEnds = [ n for n,d in igComp.degree if d==2 ]
             #print("ends:", lnEnds)
             
-            # Remove the inner nodes
+            # Remove the inner Grid nodes
             G3c.remove_nodes_from(lnInner)
+
+            # This removes the grid nodes but not the rail nodes...
             G5.remove_nodes_from(lnInner)
             
+            # Find the start and end of the two rail paths (one in each direction)
+            # corresponding to the grid path
             lnPathStart = []
             lnPathEnd = []
             
@@ -319,7 +355,6 @@ class RailEnvGraph(object):
             for grid_end in lnEnds:
                 #grid_end = lnEnds[0] # look at the first end
                 #print("grid_end", grid_end)
-                path_start = None
 
                 # Look at all the adjacent nodes to this (grid) end
                 for rail_end in G4e.adj[grid_end]: # look at the rail at this end
@@ -344,16 +379,29 @@ class RailEnvGraph(object):
                 lnPath = get_simple_path(G4d, nPathStart)
                 #print("lnPath", lnPath)
                 if len(lnPath)>2:
+                    # Remove the "inner" section of the path (if any)
                     G5.remove_nodes_from(lnPath[1:-1])
-                # Join the start and end of the rail chain into a single node
+                # Join the start and end of the rail chain into a single node (lnPath[0])
                 G5 = nx.minors.contracted_nodes(G5, lnPath[0], lnPath[-1], self_loops=False)
+
+                # There should just be one outedge
+                nNext = list(G5.successors(lnPath[0]))[0]
+                # Record the length of the removed path
+                G5.edges[lnPath[0], nNext]["l"] = len(lnInner)+2
             
             # Join up (identify, ie make identical) the ends of the grid chain into a single node
             G3c = nx.minors.contracted_nodes(G3c, *lnEnds, self_loops=False)
             G5 = nx.minors.contracted_nodes(G5, *lnEnds, self_loops=False)
 
             # Record the length of the simple path we have removed
+            # This records it in the node which will be ignored in shortest path!
+            # We use it for the length of the track
             G5.nodes()[lnEnds[0]]["l"] = len(lnInner)+2
+
+            # We need to record it in an edge... but which edge?
+            # There should just be one outedge
+            nNext = list(G5.successors(lnEnds[0]))[0]
+            G5.edges[lnEnds[0], nNext]["l"] = len(lnInner)+2
 
         return G5
 
@@ -377,7 +425,8 @@ class RailEnvGraph(object):
 
         ldNodes = [{# 'name': dNodeToIndex[oNode],
                     'id': dNodeToIndex[oNode],
-                    'title': oNode,
+                    #'title': ( int(iNode) for iNode in oNode ), # elements of tuple
+                    'title': str(oNode), 
                     #"type": np.random.randint(2)
                     #"type": self.G.node[oNode].get("type")
                     "type": G.nodes[oNode]["type"]

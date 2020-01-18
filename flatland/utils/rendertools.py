@@ -52,13 +52,14 @@ class RenderTool(object):
     def render_env(self,
                    show=False,  # whether to call matplotlib show() or equivalent after completion
                    show_agents=True,  # whether to include agents
+                   show_inactive_agents=False,  # whether to show agents before they start
                    show_observations=True,  # whether to include observations
                    show_predictions=False,  # whether to include predictions
                    frames=False,  # frame counter to show (intended since invocation)
                    episode=None,  # int episode number to show
                    step=None,  # int step number to show in image
                    selected_agent=None):  # indicate which agent is "selected" in the editor):
-        self.renderer.render_env(show, show_agents, show_observations,
+        self.renderer.render_env(show, show_agents, show_inactive_agents, show_observations,
                     show_predictions, frames, episode, step, selected_agent)
 
     def close_window(self):
@@ -66,6 +67,12 @@ class RenderTool(object):
 
     def reset(self):
         self.renderer.reset()
+    
+    def set_new_rail(self):
+        self.renderer.set_new_rail()
+
+    def update_background(self):
+        self.renderer.update_background()
     
     def get_endpoint_URL(self):
         """ Returns a string URL for the root of the HTTP server
@@ -102,6 +109,17 @@ class RenderBase(object):
     def reset(self):
         pass
 
+    def set_new_rail(self):
+        """ Signal to the renderer that the env has changed and will need re-rendering.
+        """
+        pass
+
+    def update_background(self):
+        """ A lesser version of set_new_rail?  
+            TODO: can update_background be pruned for simplicity?
+        """
+        pass
+
 
 class RenderBrowser(RenderBase):
     def __init__(self, env, host="localhost", port=None):
@@ -113,6 +131,7 @@ class RenderBrowser(RenderBase):
     def render_env(self,
             show=False,  # whether to call matplotlib show() or equivalent after completion
             show_agents=True,  # whether to include agents
+            show_inactive_agents=False, 
             show_observations=True,  # whether to include observations
             show_predictions=False,  # whether to include predictions
             frames=False,  # frame counter to show (intended since invocation)
@@ -146,6 +165,9 @@ class RenderBrowser(RenderBase):
         pass
 
     def reset(self):
+        pass
+
+    def set_new_rail(self):
         pass
 
 
@@ -537,6 +559,7 @@ class RenderLocal(RenderBase):
     def render_env(self,
                    show=False,  # whether to call matplotlib show() or equivalent after completion
                    show_agents=True,  # whether to include agents
+                   show_inactive_agents=False,
                    show_observations=True,  # whether to include observations
                    show_predictions=False,  # whether to include predictions
                    frames=False,  # frame counter to show (intended since invocation)
@@ -553,11 +576,13 @@ class RenderLocal(RenderBase):
                                 show_observations=show_observations,
                                 show_predictions=show_predictions,
                                 selected_agent=selected_agent,
-                                show_agents=show_agents
+                                show_agents=show_agents,
+                                show_inactive_agents=show_inactive_agents
                                 )
         else:
             self.render_env_pil(show=show,
                                 show_agents=show_agents,
+                                show_inactive_agents=show_inactive_agents,
                                 show_observations=show_observations,
                                 show_predictions=show_predictions,
                                 frames=frames,
@@ -580,6 +605,7 @@ class RenderLocal(RenderBase):
                        show=False,  # whether to call matplotlib show() or equivalent after completion
                        # use false when calling from Jupyter.  (and matplotlib no longer supported!)
                        show_agents=True,  # whether to include agents
+                       show_inactive_agents=False, 
                        show_observations=True,  # whether to include observations
                        show_predictions=False,  # whether to include predictions
                        frames=False,  # frame counter to show (intended since invocation)
@@ -637,7 +663,7 @@ class RenderLocal(RenderBase):
 
     def render_env_svg(
         self, show=False, show_observations=True, show_predictions=False, selected_agent=None,
-        show_agents=True
+        show_agents=True, show_inactive_agents=False
     ):
         """
         Renders the environment with SVG support (nice image)
@@ -680,23 +706,45 @@ class RenderLocal(RenderBase):
         if show_agents:
             for agent_idx, agent in enumerate(self.env.agents):
 
-                if agent is None or agent.position is None:
+                if agent is None:
+                    continue
+
+                # Show an agent even if it hasn't already started
+                if show_inactive_agents and (agent.position is None):
+                    # print("agent ", agent_idx, agent.position, agent.old_position, agent.initial_position)
+                    self.gl.set_agent_at(agent_idx, *(agent.initial_position), 
+                        agent.initial_direction, agent.initial_direction,
+                        is_selected=(selected_agent == agent_idx),
+                        rail_grid=env.rail.grid,
+                        show_debug=self.show_debug, clear_debug_text=self.clear_debug_text,
+                        malfunction=False)
                     continue
 
                 is_malfunction = agent.malfunction_data["malfunction"] > 0
 
                 if self.agent_render_variant == AgentRenderVariant.BOX_ONLY:
                     self.gl.set_cell_occupied(agent_idx, *(agent.position))
+
                 elif self.agent_render_variant == AgentRenderVariant.ONE_STEP_BEHIND or \
                     self.agent_render_variant == AgentRenderVariant.ONE_STEP_BEHIND_AND_BOX:  # noqa: E125
+
+                    # Most common case - the agent has been running for >1 steps
                     if agent.old_position is not None:
                         position = agent.old_position
                         direction = agent.direction
                         old_direction = agent.old_direction
-                    else:
+
+                    # the agent's first step - it doesn't have an old position yet
+                    elif agent.position is not None:
                         position = agent.position
                         direction = agent.direction
                         old_direction = agent.direction
+                        
+                    # When the editor has just added an agent
+                    elif agent.initial_position is not None:
+                        position = agent.initial_position
+                        direction = agent.initial_direction
+                        old_direction = agent.initial_direction
 
                     # set_agent_at uses the agent index for the color
                     if self.agent_render_variant == AgentRenderVariant.ONE_STEP_BEHIND_AND_BOX:
