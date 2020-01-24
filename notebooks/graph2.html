@@ -13,7 +13,9 @@
 	var url = new URL(window.location);
 	var sFile = url.searchParams.get("file");
 	console.log("loading file:", sFile)
-	
+  
+  const nodeColorByType = {"grid":"red", "rail":"lightblue" };
+
     fetch(sFile).then(res => res.json()).then(data => {
       const Graph = ForceGraph()
       (document.getElementById('2d-graph'))
@@ -21,15 +23,28 @@
         .nodeId('id')
         .nodeVal('val')
         .nodeLabel(node => node.id)
-		.nodeAutoColorBy('type')
+    //.nodeAutoColorBy('type')
+    .nodeColor(node => nodeColorByType[node.type])
 		.linkAutoColorBy("type")
         .linkSource('source')
-		.linkTarget('target')
-		.linkDirectionalParticles(edge => edge.type=="dir")
-		.linkDirectionalArrowLength(edge => 6 * (edge.type=="dir"))
+    .linkTarget('target')
+    .linkWidth(5)
+    .nodeRelSize(15)
+    // moving particles
+    .linkDirectionalParticles(edge => edge.type=="dir")
+    .linkDirectionalParticleWidth(10)
+    .linkDirectionalArrowLength(edge => 20 * (edge.type=="dir"))
+    // Fix nodes after dragging
+    .onNodeDragEnd(node => {
+        node.fx = node.x;
+        node.fy = node.y;
+      });
+
+    // Text labels
+    /*
 		.nodeCanvasObject((node, ctx, globalScale) => {
           const label = node.id;
-          const fontSize = 12/globalScale;
+          const fontSize = 20/globalScale;
           ctx.font = `${fontSize}px Sans-Serif`;
           const textWidth = ctx.measureText(label).width;
           const bckgDimensions = [textWidth, fontSize].map(n => n + fontSize * 0.2); // some padding
@@ -41,7 +56,7 @@
           ctx.textBaseline = 'middle';
           ctx.fillStyle = node.color;
 		  ctx.fillText(label, node.x, node.y);
-		})
+		}) */
     });
   </script>
   </script>

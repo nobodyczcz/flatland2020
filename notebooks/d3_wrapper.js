@@ -1,14 +1,4 @@
-//console.log("currentScript:", document.currentScript);
 
-var script_tag = document.getElementById('graph2d');
-
-var graph_file = script_tag.getAttribute("graph_file");
-var width = script_tag.getAttribute("width");
-var height = script_tag.getAttribute("height");
-
-console.log("inputs:", graph_file, width, height);
-
-//graph_file="./test1.json";
 
 // adapted from: https://github.com/ipython-books/cookbook-2nd-code/blob/master/chapter06_viz/04_d3.ipynb
 // We load the d3.js library from the Web.
@@ -18,7 +8,15 @@ require(["d3"], function(d3) {
   // The code in this block is executed when the
   // d3.js library has been loaded.
 
-  console.log(document.currentScript);
+
+  var script_tag = document.getElementById('graph2d');
+
+  var graph_file = script_tag.getAttribute("graph_file");
+  var width = script_tag.getAttribute("width");
+  var height = script_tag.getAttribute("height");
+
+  console.log("inputs:", graph_file, width, height);
+
 
   // specify the size of the canvas
   // containing the visualization (size of the

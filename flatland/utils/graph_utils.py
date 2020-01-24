@@ -148,7 +148,156 @@ def plotGraphEnv(G, env, aImg, space=0.3, figsize=(12,8),
         )
 
 
+def plotResourceUsage(G, llnPaths, nSteps=500, nStepsShow=200, contradir=False,
+ figsize=(20,8), twostep=False, node_ticks=False, agent_increment=False, vmax=3):
 
+    # Infer the grid paths for the rail paths
+    llnGridPaths = []
+    for lnPath in llnPaths:
+        lnGridPath = []
+        for n in lnPath:
+            # find the grid node for this rail node
+            nGrid = [ n for n, d in G.pred[n].items() if d["type"]=="hold" ][0]
+            lnGridPath.append(nGrid)
+        llnGridPaths.append(lnGridPath)
+
+    # the grid nodes, each with a vector of utilisation through time
+    dResource = OrderedDict()
+
+    # For each grid node, a list of direction nodes used
+    dlRails = OrderedDict()    
+
+    # For each grid node, a matrix of 4 x vectors of utilisation, one for each direction, indexed as above
+    dg2Dirs = OrderedDict()
+
+    for iPath, (lnGridPath, lnPath) in enumerate(list(zip(llnGridPaths, llnPaths))[:]):
+        t=0
+        
+        # Create a resource for each grid node n
+        # increment a counter for each step it is occupied by this agent
+        for i in range(len(lnGridPath)):
+            n = lnGridPath[i]
+            nRail = lnPath[i]
+            #print(i,n)
+            if n not in dResource:
+                dResource[n] = np.zeros(nSteps)
+                dlRails[n] = [nRail]  # list of rail nodes used for entry
+                dg2Dirs[n] = np.zeros((nSteps, 4)) # timesteps x "directions" (really, entry nodes)
+                #print(n, nRail)
+            
+            # Ensure we have stored the rail node used for this grid node
+            if nRail not in dlRails[n]:
+                dlRails[n].append(nRail)
+            iRail = dlRails[n].index(nRail)
+            
+            # node data for n, the grid node
+            d = G.nodes()[n]
+            if "l" in d:
+                weight = d["l"]
+            else:
+                weight = 1
+            
+            g2Dirs = dg2Dirs[n]
+
+            #print(iPath, n, weight, nRail, iRail)
+            for t2 in range(t, t+weight):
+                
+                # increment the resource utilisation
+                if agent_increment:
+                    inc = iPath+1
+                else:
+                    inc = 1
+                dResource[n][t2] += inc
+                
+                # Increment the direction utilisation
+                g2Dirs[t2, iRail] += 1
+            t += weight
+
+    a2ResSteps = np.stack(list(dResource.values()))
+    a3ResDirSteps = np.stack(list(dg2Dirs.values()))
+
+    a2ResDirSteps = np.count_nonzero(a3ResDirSteps[:,:,:], axis=2)
+
+    if not contradir:
+        plt.figure(figsize=figsize)
+        plt.imshow(a2ResSteps[:50,:nStepsShow], aspect="auto", vmax=vmax)
+        plt.title("Rail Resource usage through time")
+
+    else:
+        plt.figure(figsize=figsize)
+        plt.imshow(a2ResDirSteps[:50,:nStepsShow], aspect="auto", vmax=vmax)
+
+        plt.xticks(range(0, nStepsShow, 5))    
+        plt.title("Contra-Directional Rail Resource usage through time")
+
+    plt.xlabel("Time steps into the future")
+    plt.ylabel("Resource index")
+
+    plt.grid()
+    plt.colorbar()
+
+    if node_ticks:
+        plt.yticks(range(len(dResource)), labels=dResource.keys())
+
+    return dResource, dlRails, dg2Dirs
+
+
+def hammockPaths(G, nStart, nTarget, endSkip=0, preamble=True):
+    lGpaths = []
+    llnPaths = []
+    # print("Start, End:", nStart, nEnd)
+
+    # This is a generator of paths (shortest first)
+    genPath = nx.algorithms.shortest_simple_paths(G, nStart, nTarget)
+    # genPath = nx.algorithms.all_simple_paths(G, nStart, nEnd)
+
+    # Walk along the shortest path
+    for iPath, tPath in enumerate(genPath):
+        # We only want the first ie shortest path
+        if iPath >= 1: break
+
+        # array of rail nodes in the path: node index x 3 coords (row, col, dir)
+        g2Path = array(tPath)
+        # plt.scatter(g2Path[:, 1], -g2Path[:, 0], label=str(len(tPath)))
+
+        # Get the shortest path and record it in the lists
+        Gpath = nx.induced_subgraph(G, tPath).copy()
+        lGpaths.append(Gpath)
+        llnPaths.append(tPath)
+
+        for iStepStart in range(1, len(tPath) - endSkip):
+            tPath2 = tPath[iStepStart:]
+          
+            # Start of the path at this point
+            n = tPath2[0]
+            
+            # Check number of successors: If not a decision node, skip
+            if len(G[n]) < 2:
+                continue
+            # print("Choices at step {} - {}".format(iStepStart, len(G[n])))
+            
+            # Find the "deviation" node - the successor node which is NOT on the shortest path
+            # Next node in the shortest path
+            n2 = tPath2[1]
+            #print(n, n2, G[n])
+            lSucc = set(G[n])  # the set of successor rail nodes
+            lSucc.remove(n2)  # remove the next node in the shortest path
+            nStart2 = lSucc.pop()  # retrieve the other choice - the deviation
+            
+            # Find the shortest path, having followed the deviation
+            genPath2 = nx.algorithms.shortest_simple_paths(G, nStart2, nTarget, weight="l")
+
+            if preamble:
+                tPath3 = tPath[:iStepStart+1] + genPath2.__next__()
+            else:
+                tPath3 = [n] + genPath2.__next__()
+            print(tPath3[0], tPath3[-1])
+            Gpath = nx.induced_subgraph(G, tPath3)
+            lGpaths.append(Gpath)
+            
+            llnPaths.append(tPath3)
+
+    return llnPaths            
 
 class RailEnvGraph(object):
     """
@@ -429,8 +578,8 @@ class RailEnvGraph(object):
                     'title': str(oNode), 
                     #"type": np.random.randint(2)
                     #"type": self.G.node[oNode].get("type")
-                    "type": G.nodes[oNode]["type"]
-                } for oNode in G.nodes() ]
+                    "type": data["type"],
+                } for oNode, data in G.nodes(data=True) ]
         
         
         ldLinks = [{'source': dNodeToIndex[u], 

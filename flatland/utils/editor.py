@@ -20,7 +20,7 @@ class EditorMVC(object):
     """ EditorMVC - a class to encompass and assemble the Jupyter Editor Model-View-Controller.
     """
 
-    def __init__(self, env=None, sGL="PIL"):
+    def __init__(self, env=None, sGL="PIL", env_filename="temp.mpk"):
         """ Create an Editor MVC assembly around a railenv, or create one if None.
         """
         if env is None:
@@ -29,7 +29,7 @@ class EditorMVC(object):
 
         env.reset()
 
-        self.editor = EditorModel(env)
+        self.editor = EditorModel(env, env_filename=env_filename)
         self.editor.view = self.view = View(self.editor, sGL=sGL)
         self.view.controller = self.editor.controller = self.controller = Controller(self.editor, self.view)
         self.view.init_canvas()
@@ -139,7 +139,7 @@ class View(object):
     def new_env(self):
         """ Tell the view to update its graphics when a new env is created.
         """
-        self.oRT = rt.RenderTool(self.editor.env, gl=self.sGL, show_debug=True)
+        self.oRT = rt.RenderTool(self.editor.env, gl=self.sGL, show_debug=True, screen_height=800, screen_width=1200)
 
     def redraw(self):
         with self.output_generator:
@@ -381,7 +381,7 @@ class Controller(object):
 
 
 class EditorModel(object):
-    def __init__(self, env):
+    def __init__(self, env, env_filename="temp.mpk"):
         self.view = None
         self.env = env
         self.regen_size_width = 10
@@ -395,7 +395,7 @@ class EditorModel(object):
         self.debug_move_bool = False
         self.wid_output = None
         self.draw_mode = "Draw"
-        self.env_filename = "temp.pkl"
+        self.env_filename = env_filename
         self.set_env(env)
         self.selected_agent = None
         self.thread = None

@@ -17,11 +17,17 @@
 	var sFile = url.searchParams.get("file");
 	console.log("loading file:", sFile)
 	
+	const distance = 5000;
+  
+	const nodeColorByType = {"grid":"red", "rail":"lightblue" };
+
 	const Graph = ForceGraph3D()
       (document.getElementById('3d-graph'))
 		.jsonUrl(sFile)
 		//.jsonUrl('./miserables.json')
-        .nodeAutoColorBy('type')
+		// .nodeAutoColorBy('type')
+		//.nodeColor(node => nodeColorByType[node.type])
+		.linkAutoColorBy('type')
         .nodeThreeObject(node => {
 		          // use a sphere as a drag handle
 		          const obj = new THREE.Mesh(
@@ -30,7 +36,7 @@
 								  { depthWrite: false, 
 									transparent: true,
 									opacity: 1,
-									color:node.color })
+									color: nodeColorByType[node.type] })
 				            );
 				  if (true) {
 					//const sprite = new SpriteText(node.name); // node.id
@@ -49,12 +55,25 @@
           node.fy = node.y;
           node.fz = node.z; })
 		.linkWidth(5)
-		.cooldownTime(3000)
+		.cooldownTime(10000)
 		.d3AlphaDecay(0.001)
 		.linkDirectionalArrowLength(20)
 		.linkDirectionalArrowRelPos(1)
-		.backgroundColor("#ffffff");
+		.backgroundColor("#ffffff")
+		;
 
+		
+	if (true) {
+		// camera orbit
+		let angle = 0;
+		setInterval(() => {
+		Graph.cameraPosition({
+			x: distance * Math.sin(angle),
+			z: distance * Math.cos(angle)
+		});
+		angle += Math.PI / 300;
+		}, 10);
+	}
     // Spread nodes a little wider
     Graph.d3Force('charge').strength(-120);
   </script>
