@@ -40,9 +40,10 @@ class View(object):
     """ The Jupyter Editor View - creates and holds the widgets comprising the Editor.
     """
 
-    def __init__(self, editor, sGL="MPL"):
+    def __init__(self, editor, sGL="MPL", screen_width=1200, screen_height=1200):
         self.editor = self.model = editor
         self.sGL = sGL
+        self.xyScreen = (screen_width, screen_height)
 
     def display(self):
         self.output_generator.clear_output()
@@ -139,7 +140,8 @@ class View(object):
     def new_env(self):
         """ Tell the view to update its graphics when a new env is created.
         """
-        self.oRT = rt.RenderTool(self.editor.env, gl=self.sGL, show_debug=True, screen_height=800, screen_width=1200)
+        self.oRT = rt.RenderTool(self.editor.env, gl=self.sGL, show_debug=True,
+            screen_height=self.xyScreen[1], screen_width=self.xyScreen[0])
 
     def redraw(self):
         with self.output_generator:

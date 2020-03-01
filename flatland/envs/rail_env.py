@@ -378,6 +378,9 @@ class RailEnv(Environment):
         # Reset the malfunction generator
         self.malfunction_generator(reset=True)
 
+        # Empty the episode store of agent positions
+        self.cur_episode = []
+
         info_dict: Dict = {
             'action_required': {i: self.action_required(agent) for i, agent in enumerate(self.agents)},
             'malfunction': {

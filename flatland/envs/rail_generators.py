@@ -634,7 +634,8 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
         max_feasible_cities = min(max_num_cities,
                                   ((height - 2) // (2 * (city_radius + 1))) * ((width - 2) // (2 * (city_radius + 1))))
         if max_feasible_cities < 2:
-            sys.exit("[ABORT] Cannot fit more than one city in this map, no feasible environment possible! Aborting.")
+            # sys.exit("[ABORT] Cannot fit more than one city in this map, no feasible environment possible! Aborting.")
+            raise ValueError("ERROR: Cannot fit more than one city in this map, no feasible environment possible!")
 
         # Evenly distribute cities
         if grid_mode:

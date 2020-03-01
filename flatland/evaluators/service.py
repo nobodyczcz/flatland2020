@@ -7,6 +7,7 @@ import random
 import shutil
 import time
 import traceback
+import json
 
 import crowdai_api
 import msgpack
@@ -80,7 +81,10 @@ class FlatlandRemoteEvaluationService:
                  visualize=False,
                  video_generation_envs=[],
                  report=None,
-                 verbose=False):
+                 verbose=False,
+                 actionDir=None,
+                 episodeDir=None
+                 ):
 
         # Test Env folder Paths
         self.test_env_folder = test_env_folder
@@ -151,6 +155,9 @@ class FlatlandRemoteEvaluationService:
                 ))
                 shutil.rmtree(self.vizualization_folder_name)
             os.mkdir(self.vizualization_folder_name)
+        
+        self.actionDir = actionDir
+        self.episodeDir = episodeDir
 
     def update_running_mean_stats(self, key, scalar):
         """
@@ -185,12 +192,10 @@ class FlatlandRemoteEvaluationService:
                 ├── .......
                 └── Level_99.pkl
         """
-        env_paths = sorted(glob.glob(
-            os.path.join(
-                self.test_env_folder,
-                "*/*.pkl"
-            )
-        ))
+        env_paths = \
+            sorted(glob.glob(os.path.join(self.test_env_folder,"*/*.pkl"))) + \
+            sorted(glob.glob(os.path.join(self.test_env_folder,"*/*.mpk")))
+
         # Remove the root folder name from the individual
         # lists, so that we only have the path relative
         # to the test root folder
@@ -336,10 +341,12 @@ class FlatlandRemoteEvaluationService:
                 test_env_file_path
             )
             del self.env
-            self.env = RailEnv(width=1, height=1, rail_generator=rail_from_file(test_env_file_path),
+            self.env = RailEnv(width=1, height=1,
+                               rail_generator=rail_from_file(test_env_file_path),
                                schedule_generator=schedule_from_file(test_env_file_path),
                                malfunction_generator_and_process_data=malfunction_from_file(test_env_file_path),
-                               obs_builder_object=DummyObservationBuilder())
+                               obs_builder_object=DummyObservationBuilder(),
+                               record_steps=True)
 
             if self.begin_simulation:
                 # If begin simulation has already been initialized
@@ -402,6 +409,8 @@ class FlatlandRemoteEvaluationService:
         self.evaluation_state["score"]["score_secondary"] = mean_reward
         self.evaluation_state["meta"]["normalized_reward"] = mean_normalized_reward
         self.handle_aicrowd_info_event(self.evaluation_state)
+        self.lActions = []
+
 
     def handle_env_step(self, command):
         """
@@ -449,6 +458,12 @@ class FlatlandRemoteEvaluationService:
             percentage_complete = complete * 1.0 / self.env.get_num_agents()
             self.simulation_percentage_complete[-1] = percentage_complete
 
+            if self.actionDir is not None:
+                self.save_actions()
+            
+            if self.episodeDir is not None:
+                self.save_episode()
+
         # Record Frame
         if self.visualize:
             self.env_renderer.render_env(
@@ -469,6 +484,27 @@ class FlatlandRemoteEvaluationService:
                     ))
                 self.record_frame_step += 1
 
+        if self.actionDir is not None:
+            self.lActions.append(action)
+
+    def save_actions(self):
+        sfEnv = self.env_file_paths[self.simulation_count]
+        
+        sfActions = self.actionDir + "/" + sfEnv.replace(".pkl", ".json")
+
+        print("env path: ", sfEnv, " sfActions:", sfActions)
+
+        with open(sfActions, "w") as fOut:
+            json.dump(self.lActions, fOut)
+
+        self.lActions = []
+    
+    def save_episode(self):
+        sfEnv = self.env_file_paths[self.simulation_count]
+        sfEpisode = self.episodeDir + "/" + sfEnv
+        print("env path: ", sfEnv, " sfEpisode:", sfEpisode)
+        self.env.save_episode(sfEpisode)
+        
     def handle_env_submit(self, command):
         """
         Handles a ENV_SUBMIT command from the client
@@ -684,6 +720,20 @@ if __name__ == "__main__":
                         default="../../../submission-scoring/Envs-Small",
                         help="Folder containing the files for the test envs",
                         required=False)
+
+    parser.add_argument('--actionDir',
+                        dest='actionDir',
+                        default=None,
+                        help="Folder containing the files for the test envs",
+                        required=False)
+    
+    parser.add_argument('--episodeDir',
+                        dest='episodeDir',
+                        default=None,
+                        help="Folder containing the files for the test envs",
+                        required=False)
+    
+
     args = parser.parse_args()
 
     test_folder = args.test_folder
@@ -693,7 +743,9 @@ if __name__ == "__main__":
         flatland_rl_service_id=args.service_id,
         verbose=True,
         visualize=True,
-        video_generation_envs=["Test_0/Level_1.pkl"]
+        video_generation_envs=["Test_0/Level_1.pkl"],
+        actionDir=args.actionDir,
+        episodeDir=args.episodeDir
     )
     result = grader.run()
     if result['type'] == messages.FLATLAND_RL.ENV_SUBMIT_RESPONSE:

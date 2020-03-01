@@ -70,6 +70,7 @@ class RenderTool(object):
     
     def set_new_rail(self):
         self.renderer.set_new_rail()
+        self.renderer.env = self.env  # bit of a hack - copy our env to the delegate
 
     def update_background(self):
         self.renderer.update_background()
