@@ -940,7 +940,10 @@ class RailEnv(Environment):
     def save_episode(self, filename):
         episode_data = self.cur_episode
         msgpack.packb(episode_data, use_bin_type=True)
-        dict_data = {"episode": episode_data}
+        dict_data = {
+            "episode": episode_data,
+            "shape": (self.width, self.height)
+        }
         # msgpack.packb(msg_data, use_bin_type=True)
         with open(filename, "wb") as file_out:
             file_out.write(msgpack.packb(dict_data))
