@@ -4,7 +4,7 @@ import time
 #import tkinter as tk
 
 import numpy as np
-from PIL import Image, ImageDraw, ImageTk, ImageFont
+from PIL import Image, ImageDraw, ImageFont
 from numpy import array
 from pkg_resources import resource_string as resource_bytes
 
