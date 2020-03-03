@@ -49,13 +49,14 @@ env = RailEnv(width=100,
 
 # RailEnv.DEPOT_POSITION = lambda agent, agent_handle : (agent_handle % env.height,0)
 
-env_renderer = RenderTool(env, gl="PILSVG",
+env_renderer = RenderTool(env, gl="BROWSER",
                           agent_render_variant=AgentRenderVariant.AGENT_SHOWS_OPTIONS_AND_BOX,
                           show_debug=True,
                           screen_height=1000,
                           screen_width=1000)
 
 
+env_renderer.render_env(show=True, frames=True, show_observations=True, show_predictions=False)
 # Import your own Agent or use RLlib to train agents on Flatland
 # As an example we use a random agent instead
 class RandomAgent:
@@ -121,7 +122,7 @@ for step in range(500):
     # Environment step which returns the observations for all agents, their corresponding
     # reward and whether their are done
     next_obs, all_rewards, done, _ = env.step(action_dict)
-    env_renderer.render_env(show=True, show_observations=False, show_predictions=False)
+    env_renderer.render_env(show=True, frames=True, show_observations=True, show_predictions=False)
     frame_step += 1
     # Update replay buffer and train agent
     for a in range(env.get_num_agents()):

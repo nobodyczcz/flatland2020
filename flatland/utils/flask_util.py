@@ -24,12 +24,13 @@ class simple_flask_server(object):
         It might be easier to revert to the "standard" flask global functions + decorators.
     """
 
-    static_folder = os.path.join(os.getcwd(), "static")
+    static_folder = os.path.join("static")
+    # static_folder = ""
     print("Flask static folder: ", static_folder)
-    app = Flask(__name__, 
+    app = Flask(__name__,
         static_url_path='',
         static_folder=static_folder)
-        
+
     socketio = SocketIO(app, cors_allowed_origins='*')
 
     # This is the original format for the I/O.
@@ -42,18 +43,18 @@ class simple_flask_server(object):
         ]
     agents_static = [
         # [initial position], initial direction, [target], 0 (?)
-        [[7, 9], 2, [3, 5], 0, 
+        [[7, 9], 2, [3, 5], 0,
             # Speed and malfunction params
-            {"position_fraction": 0, "speed": 1, "transition_action_on_cellexit": 3},  
-            {"malfunction": 0, "malfunction_rate": 0,  "next_malfunction": 0, "nr_malfunctions": 0}], 
-        [[8,  8],  1,  [1,  6],  0,  
-            {"position_fraction": 0, "speed": 1, "transition_action_on_cellexit": 2},  
-            {"malfunction": 0, "malfunction_rate": 0,  "next_malfunction": 0, "nr_malfunctions": 0}], 
-        [[3,  7],  2,  [0,  1],  0,  
-            {"position_fraction": 0, "speed": 1, "transition_action_on_cellexit": 2},  
+            {"position_fraction": 0, "speed": 1, "transition_action_on_cellexit": 3},
+            {"malfunction": 0, "malfunction_rate": 0,  "next_malfunction": 0, "nr_malfunctions": 0}],
+        [[8,  8],  1,  [1,  6],  0,
+            {"position_fraction": 0, "speed": 1, "transition_action_on_cellexit": 2},
+            {"malfunction": 0, "malfunction_rate": 0,  "next_malfunction": 0, "nr_malfunctions": 0}],
+        [[3,  7],  2,  [0,  1],  0,
+            {"position_fraction": 0, "speed": 1, "transition_action_on_cellexit": 2},
             {"malfunction": 0, "malfunction_rate": 0,  "next_malfunction": 0, "nr_malfunctions": 0}]
         ]
-    
+
     # "actions" are not really actions, but [row, col, direction] for each agent, at each time step
     # This format does not yet handle agents which are in states inactive or done_removed
     actions= [
@@ -82,25 +83,25 @@ class simple_flask_server(object):
             self.port = self._find_available_port(host)
         else:
             self.port = port
-                    
+
         self.socketio.run(simple_flask_server.app, host=host, port=self.port)
-    
+
     def run_flask_server_in_thread(self,  host="127.0.0.1", port=None):
         # daemon=True so that this thread exits when the main / foreground thread exits,
         # usually when the episode finishes.
         self.thread = threading.Thread(
-            target=self.run_flask_server, 
-            kwargs={"host": host, "port": port}, 
+            target=self.run_flask_server,
+            kwargs={"host": host, "port": port},
             daemon=True)
         self.thread.start()
         # short sleep to allow thread to start (may be unnnecessary)
         time.sleep(1)
-    
+
     def open_browser(self):
-        webbrowser.open("http://localhost:{}".format(self.port))
+        webbrowser.open("http://localhost:{}/?port={}".format(self.port, self.port))
         # short sleep to allow browser to request the page etc (may be unnecessary)
         time.sleep(1)
-    
+
     def _test_listen_port(self, host: str, port: int):
         oSock = socket.socket()
         try:
@@ -108,7 +109,7 @@ class simple_flask_server(object):
         except OSError:
             return False  # The port is not available
 
-        del oSock  # This should release the port        
+        del oSock  # This should release the port
         return True  # The port is available
 
     def _find_available_port(self, host: str, port_start: int = 8080):
@@ -136,10 +137,10 @@ class simple_flask_server(object):
         '''
         cls = simple_flask_server
         print('Client connected')
-        
+
         # Do we really need this?
         cls.socketio.emit('message', {'message': 'Connected'})
-        
+
         print('Send Env grid and agents')
         # cls.socketio.emit('grid', {'grid': cls.gridmap, 'agents_static': cls.agents_static}, broadcast=False)
         cls.instance.send_env()
@@ -157,7 +158,7 @@ class simple_flask_server(object):
         self.socketio.emit('agentsAction', {'actions': llAgents})
 
     def send_observation(self, agent_handles, dict_obs):
-        """ Send an observation.  
+        """ Send an observation.
             TODO: format observation message.
         """
         self.socketio.emit("observation", {"agents": agent_handles, "observations": dict_obs})
@@ -170,11 +171,11 @@ class simple_flask_server(object):
         llGrid = g2sGrid.tolist()
         llAgents = self.agents_to_list_dict()
         self.socketio.emit('grid', {
-                'grid': llGrid, 
+                'grid': llGrid,
                 'agents_static': llAgents
                 },
              broadcast=False)
-    
+
     def send_env_and_wait(self):
         for iAttempt in range(30):
             if self.is_renderer_ready():
@@ -195,19 +196,19 @@ class simple_flask_server(object):
 
         if data['status'] == 'listening':
             self.renderer_ready = True
-    
+
     def is_renderer_ready(self):
         return self.renderer_ready
 
     def agents_to_list_dict(self):
         ''' Create a list of lists / dicts for serialisation
-            Maps from the internal representation in EnvAgent to 
+            Maps from the internal representation in EnvAgent to
             the schema used by the Javascript renderer.
         '''
         llAgents = []
         for agent in self.env.agents:
             if agent.position is None:
-                # the int()s are to convert from numpy int64 which causes problems in serialization 
+                # the int()s are to convert from numpy int64 which causes problems in serialization
                 # to plain old python int
                 lPos = [int(agent.initial_position[0]), int(agent.initial_position[1])]
             else:
@@ -216,22 +217,22 @@ class simple_flask_server(object):
             lAgent = [
                         lPos,
                         int(agent.direction),
-                        [int(agent.target[0]), int(agent.target[1])], 0, 
+                        [int(agent.target[0]), int(agent.target[1])], 0,
                         {   # dummy values:
                             "position_fraction": 0,
                             "speed": 1,
                             "transition_action_on_cellexit": 3
-                        }, 
+                        },
                         {
                             "malfunction": 0,
                             "malfunction_rate": 0,
                             "next_malfunction": 0,
                             "nr_malfunctions": 0
-                        } 
+                        }
                 ]
             llAgents.append(lAgent)
         return llAgents
-    
+
     def agents_to_list(self):
         llAgents = []
         for agent in self.env.agents:

@@ -126,6 +126,7 @@ class RenderBrowser(RenderBase):
     def __init__(self, env, host="localhost", port=None):
         self.server = simple_flask_server(env)
         self.server.run_flask_server_in_thread(host=host, port=port)
+        self.server.open_browser()
         self.env = env
         self.background_rendered = False
 
