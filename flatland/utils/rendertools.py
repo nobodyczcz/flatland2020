@@ -8,7 +8,7 @@ from numpy import array
 from recordtype import recordtype
 
 from flatland.utils.graphics_pil import PILGL, PILSVG
-
+from flatland.utils.flask_util import simple_flask_server
 
 # TODO: suggested renaming to RailEnvRenderTool, as it will only work with RailEnv!
 
@@ -21,6 +21,158 @@ class AgentRenderVariant(IntEnum):
 
 
 class RenderTool(object):
+    """ RenderTool is a facade to a renderer, either local or browser
+    """
+    def __init__(self, env, gl="BROWSER", jupyter=False,
+                 agent_render_variant=AgentRenderVariant.ONE_STEP_BEHIND,
+                 show_debug=False, clear_debug_text=True, screen_width=800, screen_height=600,
+                 host="localhost", port=None):
+
+        self.env = env
+        self.frame_nr = 0
+        self.start_time = time.time()
+        self.times_list = deque()
+
+        self.agent_render_variant = agent_render_variant
+
+        if gl in ["PIL", "PILSVG", "TKPIL", "TKPILSVG"]:
+            self.renderer = RenderLocal(env, gl, jupyter,
+                 agent_render_variant,
+                 show_debug, clear_debug_text, screen_width, screen_height)
+
+            # To support legacy access to the GraphicsLayer (gl)
+            # DEPRECATED - TODO: remove these calls!
+            self.gl = self.renderer.gl
+
+        elif gl == "BROWSER":
+            self.renderer = RenderBrowser(env, host=host, port=port)
+        else:
+            print("[", gl, "] not found, switch to PILSVG or BROWSER")
+
+    def render_env(self,
+                   show=False,  # whether to call matplotlib show() or equivalent after completion
+                   show_agents=True,  # whether to include agents
+                   show_inactive_agents=False,  # whether to show agents before they start
+                   show_observations=True,  # whether to include observations
+                   show_predictions=False,  # whether to include predictions
+                   frames=False,  # frame counter to show (intended since invocation)
+                   episode=None,  # int episode number to show
+                   step=None,  # int step number to show in image
+                   selected_agent=None):  # indicate which agent is "selected" in the editor):
+        self.renderer.render_env(show, show_agents, show_inactive_agents, show_observations,
+                    show_predictions, frames, episode, step, selected_agent)
+
+    def close_window(self):
+        self.renderer.close_window()
+
+    def reset(self):
+        self.renderer.reset()
+
+    def set_new_rail(self):
+        self.renderer.set_new_rail()
+        self.renderer.env = self.env  # bit of a hack - copy our env to the delegate
+
+    def update_background(self):
+        self.renderer.update_background()
+
+    def get_endpoint_URL(self):
+        """ Returns a string URL for the root of the HTTP server
+            TODO: Need to update this work work on a remote server!  May be tricky...
+        """
+        #return "http://localhost:{}".format(self.renderer.get_port())
+        if hasattr(self.renderer, "get_endpoint_url"):
+            return self.renderer.get_endpoint_url()
+        else:
+            print("Attempt to get_endpoint_url from RenderTool - only supported with BROWSER")
+            return None
+
+    def get_image(self):
+        """
+        """
+        if hasattr(self.renderer, "gl"):
+            return self.renderer.gl.get_image()
+        else:
+            print("Attempt to retrieve image from RenderTool - not supported with BROWSER")
+            return None
+
+
+
+class RenderBase(object):
+    def __init__(self, env):
+        pass
+
+    def render_env(self):
+        pass
+
+    def close_window(self):
+        pass
+
+    def reset(self):
+        pass
+
+    def set_new_rail(self):
+        """ Signal to the renderer that the env has changed and will need re-rendering.
+        """
+        pass
+
+    def update_background(self):
+        """ A lesser version of set_new_rail?
+            TODO: can update_background be pruned for simplicity?
+        """
+        pass
+
+
+class RenderBrowser(RenderBase):
+    def __init__(self, env, host="localhost", port=None):
+        self.server = simple_flask_server(env)
+        self.server.run_flask_server_in_thread(host=host, port=port)
+        self.env = env
+        self.background_rendered = False
+
+    def render_env(self,
+            show=False,  # whether to call matplotlib show() or equivalent after completion
+            show_agents=True,  # whether to include agents
+            show_inactive_agents=False,
+            show_observations=True,  # whether to include observations
+            show_predictions=False,  # whether to include predictions
+            frames=False,  # frame counter to show (intended since invocation)
+            episode=None,  # int episode number to show
+            step=None,  # int step number to show in image
+            selected_agent=None):  # indicate which agent is "selected" in the editor):
+
+        if not self.background_rendered:
+            self.server.send_env_and_wait()
+            self.background_rendered = True
+
+        self.server.send_actions({})
+
+        if show_observations:
+            self.render_observation(range(self.env.get_num_agents()), self.env.dev_obs_dict)
+
+    def render_observation(self, agent_handles, dict_observation):
+        # Change keys to strings, and OrderedSet to list (of tuples)
+        dict_obs2 = {str(item[0]): list(item[1]) for item in self.env.dev_obs_dict.items()}
+        # Convert any ranges into a list
+        list_handles = list(agent_handles)
+        self.server.send_observation(list_handles, dict_obs2)
+
+    def get_port(self):
+        return self.server.port
+
+    def get_endpoint_url(self):
+        return self.server.get_endpoint_url()
+
+    def close_window(self):
+        pass
+
+    def reset(self):
+        pass
+
+    def set_new_rail(self):
+        pass
+
+
+class RenderLocal(RenderBase):
     """ Class to render the RailEnv and agents.
         Uses two layers, layer 0 for rails (mostly static), layer 1 for agents etc (dynamic)
         The lower / rail layer 0 is only redrawn after set_new_rail() has been called.
@@ -49,6 +201,8 @@ class RenderTool(object):
         self.times_list = deque()
 
         self.agent_render_variant = agent_render_variant
+
+        self.gl_str = gl
 
         if gl == "PIL":
             self.gl = PILGL(env.width, env.height, jupyter, screen_width=screen_width, screen_height=screen_height)
@@ -410,6 +564,7 @@ class RenderTool(object):
         """ Draw the environment using the GraphicsLayer this RenderTool was created with.
             (Use show=False from a Jupyter notebook with %matplotlib inline)
         """
+
         if type(self.gl) is PILSVG:
             self.render_env_svg(show=show,
                                 show_observations=show_observations,
