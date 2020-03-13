@@ -149,7 +149,59 @@ def plotGraphEnv(G, env, aImg, space=0.3, figsize=(12,8),
         )
 
 
-def plotResourceUsage(G, llnPaths, nSteps=500, nStepsShow=200, contradir=False,
+def genStartTargetDirs(G, env, ):
+    lGpaths = []        # list of paths as graphs
+    llnPaths = []       # list of paths as list of nodes (rail nodes + dir edges)
+    lltStartTarg = []   # [start, target] for each direction permutation 
+                        # as list of 2-lists of 3-tuples (rail nodes)
+
+    nAgents = len(env.agents)
+    print("nAgents:", nAgents)
+    if True:
+        for iAgent, agent in enumerate(env.agents[:nAgents]):
+            nStart = agent.initial_position  # grid node (row,col)
+            nEnd = agent.target  # grid node
+            lnStartDir = []
+
+            # check the start grid node is in the graph
+            if nStart in G and nEnd in G:
+                # Find all the rail node neighbours
+                lnNeighbours = list(G.neighbors(nStart))
+                for nNbr in lnNeighbours:
+                    if len(nNbr)==3:  # rail nodes are triples, grid nodes are two-ples.
+                        lnStartDir.append(nNbr)
+
+                lnEndDir = []
+                lnNeighbours = list(G.neighbors(nEnd))
+                for nNbr in lnNeighbours:
+                    if len(nNbr)==3:  # rail nodes
+                        lnEndDir.append(nNbr)
+
+                print("agent:", iAgent, nStart, "poss starts:", lnStartDir, nEnd, "poss ends:", lnEndDir)
+            else:
+                print("Start / end not in graph:", nStart, nEnd)
+        
+            # iterate all the (start dir, end dir)s
+            for nStartDir in lnStartDir[:]:
+                for nEndDir in lnEndDir[:]:
+                    lnPath=[]
+                    try:
+                        lnPath = nx.algorithms.shortest_path(G, source=nStartDir, target=nEndDir)
+                    except nx.exception.NetworkXNoPath:
+                        print("No path:", nStartDir, nEndDir)
+                        continue
+                        
+                    Gpath = nx.induced_subgraph(G, lnPath)
+                    lGpaths.append(Gpath)
+                    llnPaths.append(lnPath)
+                    lltStartTarg.append([nStartDir, nEndDir])
+                    print("Path length:", len(lnPath))
+
+
+def plotResourceUsage(G, llnPaths,
+    llnAltPaths=None,
+    nSteps=500, nStepsShow=200,
+    contradir=False,
     nResources=50,
     figsize=(20,8), twostep=False, node_ticks=False, agent_increment=False, vmax=3,
     grid=True, cmap=None):
