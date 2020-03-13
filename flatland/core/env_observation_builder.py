@@ -92,7 +92,7 @@ class DummyObservationBuilder(ObservationBuilder):
         pass
 
     def get_many(self, handles: Optional[List[int]] = None) -> bool:
-        return True
+        return [ True for i in handles ]
 
     def get(self, handle: int = 0) -> bool:
         return True

@@ -5,6 +5,7 @@ import json
 from numpy import array
 from collections import OrderedDict
 import matplotlib.pyplot as plt
+from matplotlib import cm
 
 # turn a transition into a string of binary
 def trans_int_to_binstr(intTrans):
@@ -149,7 +150,9 @@ def plotGraphEnv(G, env, aImg, space=0.3, figsize=(12,8),
 
 
 def plotResourceUsage(G, llnPaths, nSteps=500, nStepsShow=200, contradir=False,
- figsize=(20,8), twostep=False, node_ticks=False, agent_increment=False, vmax=3):
+    nResources=50,
+    figsize=(20,8), twostep=False, node_ticks=False, agent_increment=False, vmax=3,
+    grid=True, cmap=None):
 
     # Infer the grid paths for the rail paths
     llnGridPaths = []
@@ -218,14 +221,17 @@ def plotResourceUsage(G, llnPaths, nSteps=500, nStepsShow=200, contradir=False,
 
     a2ResDirSteps = np.count_nonzero(a3ResDirSteps[:,:,:], axis=2)
 
+    if cmap is None:
+        cmap = cm.get_cmap("viridis")
+
     if not contradir:
         plt.figure(figsize=figsize)
-        plt.imshow(a2ResSteps[:50,:nStepsShow], aspect="auto", vmax=vmax)
+        plt.imshow(a2ResSteps[:nResources,:nStepsShow], aspect="auto", vmax=vmax, cmap=cmap)
         plt.title("Rail Resource usage through time")
 
     else:
         plt.figure(figsize=figsize)
-        plt.imshow(a2ResDirSteps[:50,:nStepsShow], aspect="auto", vmax=vmax)
+        plt.imshow(a2ResDirSteps[:nResources,:nStepsShow], aspect="auto", vmax=vmax, cmap=cmap)
 
         plt.xticks(range(0, nStepsShow, 5))    
         plt.title("Contra-Directional Rail Resource usage through time")
@@ -233,11 +239,12 @@ def plotResourceUsage(G, llnPaths, nSteps=500, nStepsShow=200, contradir=False,
     plt.xlabel("Time steps into the future")
     plt.ylabel("Resource index")
 
-    plt.grid()
+    if grid: 
+        plt.grid()
     plt.colorbar()
 
     if node_ticks:
-        plt.yticks(range(len(dResource)), labels=dResource.keys())
+        plt.yticks(range(len(dResource))[:nResources], labels=list(dResource.keys())[:nResources])
 
     return dResource, dlRails, dg2Dirs
 
@@ -336,6 +343,7 @@ class RailEnvGraph(object):
 
         self.add_entry_nodes()
         self.add_exit_edges()
+        self.set_halts()
     
     def add_entry_nodes(self):
         """ Add a node for each inbound transition to a cell
@@ -372,6 +380,18 @@ class RailEnvGraph(object):
                             rcOut = tuple(array(rcIn) + gDirs[dirOut])
                             self.G.add_edge((*rcIn, dirIn), (*rcOut, dirOut), type="dir", l=1)
 
+    def set_halts(self):
+        stHalts = set()
+        for agent in self.env.agents:
+            if agent.initial_position is not None:
+                stHalts.add(agent.initial_position)
+            if agent.target is not None:
+                stHalts.add(agent.target)
+        
+        for tHalt in stHalts:
+            if tHalt in self.G:
+                self.G.nodes()[tHalt]["halt"] = True
+
     def graph_rail_grid(self):
         """ returns a NX graph of rails only; includes:
             - grid nodes with rails
@@ -394,10 +414,10 @@ class RailEnvGraph(object):
         # The "hold" edges are grid->rail
         # Copy the grid nodes connected to the rails, setting the type=grid
         G2.add_nodes_from([
-                u for u, v, d in self.G.edges(data=True)
+                (u, self.G.nodes[u])  # node, attr dict
+                for u, v, d in self.G.edges(data=True)
                 if d["type"]=="hold"
-            ],
-            type="grid")
+            ])
 
         # Copy all the hold edges
         G2.add_edges_from([(u,v,d) for u, v, d in self.G.edges(data=True)
@@ -447,7 +467,8 @@ class RailEnvGraph(object):
         G3b = G3.copy()
 
         # G4 is a subgraph consisting only of the grid nodes with only 2 neighbours
-        lnGridSimple = [ n for n, d in G3b.nodes(data=True) if G3b.degree[n]==4 ]
+        # (degree is 4 because undirected edges in a DiGraph are counted twice)
+        lnGridSimple = [ n for n, d in G3b.nodes(data=True) if (G3b.degree[n]==4) and ("halt" not in d) ]
         G4 = G3b.subgraph(lnGridSimple)  # copies the nodes + data, and the (grid) edges + data.
 
         # Get the rail nodes (held by hold edges) and edges and their dir edges

@@ -206,7 +206,9 @@ class RailEnv(Environment):
 
         # save episode timesteps ie agent positions, orientations.  (not yet actions / observations)
         self.record_steps = record_steps  # whether to save timesteps
-        self.cur_episode = []  # save timesteps in here
+        # save timesteps in here: [[[row, col, dir, malfunction],...nAgents], ...nSteps]
+        self.cur_episode = []  
+        self.list_actions = [] # save actions in here
 
     def _seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
@@ -505,7 +507,7 @@ class RailEnv(Environment):
             for i_agent in range(self.get_num_agents()):
                 self.dones[i_agent] = True
         if self.record_steps:
-            self.record_timestep()
+            self.record_timestep(action_dict_)
 
         return self._get_observations(), self.rewards_dict, self.dones, info_dict
 
@@ -729,7 +731,7 @@ class RailEnv(Environment):
             cell_free = False
         return cell_free, new_cell_valid, new_direction, new_position, transition_valid
 
-    def record_timestep(self):
+    def record_timestep(self, dActions):
         ''' Record the positions and orientations of all agents in memory, in the cur_episode
         '''
         list_agents_state = []
@@ -742,8 +744,11 @@ class RailEnv(Environment):
             else:
                 pos = (int(agent.position[0]), int(agent.position[1]))
             # print("pos:", pos, type(pos[0]))
-            list_agents_state.append([*pos, int(agent.direction)])
+            list_agents_state.append(
+                [*pos, int(agent.direction), agent.malfunction_data["malfunction"] ])
+
         self.cur_episode.append(list_agents_state)
+        self.list_actions.append(dActions)
 
     def cell_free(self, position: IntVector2D) -> bool:
         """
@@ -857,11 +862,14 @@ class RailEnv(Environment):
         """
         grid_data = self.rail.grid.tolist()
         agent_data = [agent.to_agent() for agent in self.agents]
+
+        # I think these calls do nothing - they create packed data and it is discarded
         msgpack.packb(grid_data, use_bin_type=True)
         msgpack.packb(agent_data, use_bin_type=True)
+
         distance_map_data = self.distance_map.get()
         malfunction_data: MalfunctionProcessData = self.malfunction_process_data
-        msgpack.packb(distance_map_data, use_bin_type=True)
+        msgpack.packb(distance_map_data, use_bin_type=True)  # does nothing
         msg_data = {
             "grid": grid_data,
             "agents": agent_data,
@@ -938,10 +946,10 @@ class RailEnv(Environment):
                 file_out.write(self.get_full_state_msg())
 
     def save_episode(self, filename):
-        episode_data = self.cur_episode
-        msgpack.packb(episode_data, use_bin_type=True)
+        #episode_data = self.cur_episode
+        # msgpack.packb(episode_data, use_bin_type=True)
         dict_data = {
-            "episode": episode_data,
+            "episode": self.cur_episode,
             "shape": (self.width, self.height)
         }
         # msgpack.packb(msg_data, use_bin_type=True)

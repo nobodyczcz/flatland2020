@@ -81,6 +81,8 @@ class EnvAgent:
         self.malfunction_data['nr_malfunctions'] = 0
         self.malfunction_data['moving_before_malfunction'] = False
 
+    # Why do we need this?  Why not just use copy.copy() ?  Why would we even need to use copy()?
+    # Is there a problem with msgpack?
     def to_agent(self) -> Agent:
         return Agent(initial_position=self.initial_position, initial_direction=self.initial_direction,
                      direction=self.direction, target=self.target, moving=self.moving, speed_data=self.speed_data,
