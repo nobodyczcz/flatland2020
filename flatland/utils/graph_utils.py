@@ -4,8 +4,11 @@ import pandas as pd
 import json
 from numpy import array
 from collections import OrderedDict
+import itertools as it
 import matplotlib.pyplot as plt
 from matplotlib import cm
+from flatland.envs.rail_env import RailEnv
+from flatland.envs.agent_utils import EnvAgent
 
 # turn a transition into a string of binary
 def trans_int_to_binstr(intTrans):
@@ -105,8 +108,9 @@ def get_simple_path(G, u):
     return list(visited.keys())
 
 
-def plotGraphEnv(G, env, aImg, space=0.3, figsize=(12,8),
+def plotGraphEnv(G, env:RailEnv, aImg, space=0.3, figsize=(12,8),
                  show_labels=(), show_edges=("dir"),
+                 show_edge_weights=False,
                  show_nodes="all", node_colors=None, edge_colors=None, 
                  alpha_img=0.2,
                  node_size=300):
@@ -135,21 +139,64 @@ def plotGraphEnv(G, env, aImg, space=0.3, figsize=(12,8),
     dnDat = G.nodes(data=True)
     deDat = {(u, v): d for u, v, d in G.edges(data=True) if d["type"] in show_edges}
     
+    dnxyPos = {n:(
+                    n[1] if len(n)==2 else n[1] - space * xy2[n[2],0],
+                    -n[0] if len(n)==2 else -n[0] - space * xy2[n[2],1]  )
+                for n in G.nodes()}
+
     nx.draw(G,
             labels={n:str(n) for n,d in G.nodes(data=True) if d["type"] in show_labels},
             node_color=[ node_colors[dnDat[n]["type"]] for n in nodelist], 
-            pos={n:(
-                    n[1] if len(n)==2 else n[1] - space * xy2[n[2],0],
-                    -n[0] if len(n)==2 else -n[0] - space * xy2[n[2],1]  )
-                for n in G.nodes()},
+            pos=dnxyPos,
             edgelist=edgelist,
             edge_color=[edge_colors[deDat[(u,v)]["type"]] for u,v in edgelist],
             nodelist=nodelist,
             node_size=node_size
-        )
+            )
+
+    if show_edge_weights:
+        labels = nx.get_edge_attributes(G,'l')
+        labels2 = { (uv[0], uv[1]):l for uv,l in labels.items() if l>1}
+        nx.draw_networkx_edge_labels(G, dnxyPos, edge_labels=labels2)
+
+    # plot initial, target positions
+
+    rcStarts = np.array([ agent.initial_position for agent in env.agents ])
+    xyStarts = np.matmul(rcStarts, [[0,-1],[1,0]])
+    rcTargs = np.array([ agent.target for agent in env.agents ])
+    xyTargs = np.matmul(rcTargs, [[0,-1],[1,0]])
+
+    # Cyan Square for starts, Red Triangle for targets
+    plt.scatter(*xyStarts.T, s=200, marker="s", facecolor="cyan", edgecolor="black")
+    plt.scatter(*xyTargs.T, s=200, marker="^", facecolor="red", edgecolor="black")
+
+    # make dict of list of initial, target pos
+    dlIPos = {}
+    dlTPos = {}
+    for agent in env.agents:
+        liAgent = dlIPos.get(agent.initial_position, []) + [agent.handle]
+        dlIPos[agent.initial_position] = liAgent
+
+        liAgent = dlTPos.get(agent.target, []) + [agent.handle]
+        dlTPos[agent.target] = liAgent
+
+    # Write the agent numbers for each initial, target pos
+    for rcPos, liAgent in dlIPos.items():
+        plt.annotate(",".join(map(str, liAgent)), (rcPos[1], -rcPos[0]+0.4))
+
+    for rcPos, liAgent in dlTPos.items():
+        plt.annotate(",".join(map(str, liAgent)), (rcPos[1], -rcPos[0]-0.6))
+        #plt.annotate(str(iAgent), (rcPos[1]+i*0.3, -rcPos[0]-0.6))
+            
 
 
-def genStartTargetDirs(G, env, ):
+def genStartTargetDirs(G, env, shortest=True):
+    """ find the possible directions for each agent in an env.
+        Flatland does not currently define an initial direction for an agent -
+        the agent gets to choose.  Nor does it define a final direction.
+        However some combinations of initial and final direction may not be possible.
+        This function finds the possible directions.
+    """
     lGpaths = []        # list of paths as graphs
     llnPaths = []       # list of paths as list of nodes (rail nodes + dir edges)
     lltStartTarg = []   # [start, target] for each direction permutation 
@@ -177,26 +224,44 @@ def genStartTargetDirs(G, env, ):
                     if len(nNbr)==3:  # rail nodes
                         lnEndDir.append(nNbr)
 
-                print("agent:", iAgent, nStart, "poss starts:", lnStartDir, nEnd, "poss ends:", lnEndDir)
+                #print("agent:", iAgent, nStart, "poss starts:", lnStartDir, nEnd, "poss ends:", lnEndDir)
             else:
                 print("Start / end not in graph:", nStart, nEnd)
         
-            # iterate all the (start dir, end dir)s
-            for nStartDir in lnStartDir[:]:
-                for nEndDir in lnEndDir[:]:
-                    lnPath=[]
-                    try:
-                        lnPath = nx.algorithms.shortest_path(G, source=nStartDir, target=nEndDir)
-                    except nx.exception.NetworkXNoPath:
-                        print("No path:", nStartDir, nEndDir)
-                        continue
-                        
-                    Gpath = nx.induced_subgraph(G, lnPath)
-                    lGpaths.append(Gpath)
-                    llnPaths.append(lnPath)
-                    lltStartTarg.append([nStartDir, nEndDir])
-                    print("Path length:", len(lnPath))
+            lnPathShortest = None
+            GpathShortest = None
+            rLen = 9e9
 
+            tPathGraphDirs = None
+
+            # iterate all the (start dir, end dir) pairs
+            #for nStartDir in lnStartDir[:]:
+            #    for nEndDir in lnEndDir[:]:
+
+            
+            for (nStartDir, nEndDir) in it.product(lnStartDir, lnEndDir):
+                #lnPath=[]
+                try:
+                    lnPath = nx.algorithms.shortest_path(G, source=nStartDir, target=nEndDir)
+                except nx.exception.NetworkXNoPath:
+                    print("No path:", nStartDir, nEndDir)
+                    continue
+                    
+                Gpath = nx.induced_subgraph(G, lnPath)
+                pathLen = Gpath.size(weight="l")
+                #print("Path nodes:", len(lnPath), " total len:", pathLen)
+                if (pathLen < rLen):
+                    rLen = pathLen
+                    #lnPathShortest = lnPath
+                    #GpathShortest = Gpath
+                    tPathGraphDirs = (lnPath, Gpath, nStartDir, nEndDir)
+
+
+            lGpaths.append(tPathGraphDirs[1])
+            llnPaths.append(tPathGraphDirs[0])
+            lltStartTarg.append(tPathGraphDirs[2:4])
+
+    return lGpaths, llnPaths, lltStartTarg
 
 def plotResourceUsage(G, llnPaths,
     llnAltPaths=None,
