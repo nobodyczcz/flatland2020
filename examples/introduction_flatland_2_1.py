@@ -83,21 +83,31 @@ from flatland.utils.rendertools import RenderTool, AgentRenderVariant
 # The railway infrastructure can be build using any of the provided generators in env/rail_generators.py
 # Here we use the sparse_rail_generator with the following parameters
 
-if in_notebook:  # use a smaller map in the notebook
-    width = 30  # With of map
-    height = 30  # Height of map
-    nr_trains = 5  # Number of trains that have an assigned task in the env
-    cities_in_map = 2  # Number of cities where agents can start or end
+
+
+if False:
+    if in_notebook:  # use a smaller map in the notebook
+        width = 30  # With of map
+        height = 30  # Height of map
+        nr_trains = 5  # Number of trains that have an assigned task in the env
+        cities_in_map = 2  # Number of cities where agents can start or end
+    else:
+        width = 16 * 7  # With of map
+        height = 9 * 7  # Height of map
+        nr_trains = 50  # Number of trains that have an assigned task in the env
+        cities_in_map = 20  # Number of cities where agents can start or end
 else:
-    width = 16 * 7  # With of map
-    height = 9 * 7  # Height of map
-    nr_trains = 50  # Number of trains that have an assigned task in the env
-    cities_in_map = 20  # Number of cities where agents can start or end
+    width = 25  # With of map
+    height = 25  # Height of map
+    nr_trains = 10  # Number of trains that have an assigned task in the env
+    cities_in_map = 2  # Number of cities where agents can start or end
+
+
     
 seed = 14  # Random seed
 grid_distribution_of_cities = False  # Type of city distribution, if False cities are randomly placed
 max_rails_between_cities = 2  # Max number of tracks allowed between cities. This is number of entry point to a city
-max_rail_in_cities = 6  # Max number of parallel tracks within a city, representing a realistic trainstation
+max_rail_in_cities = 3 # 6  # Max number of parallel tracks within a city, representing a realistic trainstation
 
 rail_generator = sparse_rail_generator(max_num_cities=cities_in_map,
                                        seed=seed,
@@ -145,7 +155,7 @@ env = RailEnv(width=width,
 env.reset()
 
 # Initiate the renderer
-env_renderer = RenderTool(env,   gl="TKPILSVG",
+env_renderer = RenderTool(env,  gl="PGL", # gl="TKPILSVG",
                           agent_render_variant=AgentRenderVariant.ONE_STEP_BEHIND,
                           show_debug=False,
                           screen_height=600,  # Adjust these parameters to fit your resolution
@@ -333,6 +343,8 @@ for step in range(nSteps):
     if done['__all__']:
         break
     print('Episode: Steps {}\t Score = {}'.format(step, score))
+
+    time.sleep(1)
 
     if in_notebook:
         arrImage = env_renderer.get_image()
