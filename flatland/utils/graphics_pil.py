@@ -294,7 +294,7 @@ class PILSVG(PILGL):
             return pil_img
 
     def load_buildings(self):
-        dBuildingFiles = [
+        lBuildingFiles = [
             "Buildings-Bank.svg",
             "Buildings-Bar.svg",
             "Buildings-Wohnhaus.svg",
@@ -316,13 +316,17 @@ class PILSVG(PILGL):
             "Buildings-Fabrik_I.svg"
         ]
 
-        imgBg = self.pil_from_svg_file('svg', "Background_city.svg")
+        imgBg = self.pil_from_svg_file('flatland.svg', "Background_city.svg")
+        imgBg = imgBg.convert("RGBA")
+        print("imgBg mode:", imgBg.mode)
 
-        self.dBuildings = []
-        for sFile in dBuildingFiles:
-            img = self.pil_from_svg_file('svg', sFile)
+        self.lBuildings = []
+        for sFile in lBuildingFiles:
+            print("Loading:", sFile)
+            img = self.pil_from_svg_file('flatland.svg', sFile)
+            print("img mode:", img.mode)
             img = Image.alpha_composite(imgBg, img)
-            self.dBuildings.append(img)
+            self.lBuildings.append(img)
 
     def load_scenery(self):
         scenery_files = [
@@ -349,31 +353,31 @@ class PILSVG(PILGL):
             "Scenery_Water.svg"
         ]
 
-        img_back_ground = self.pil_from_svg_file('svg', "Background_Light_green.svg")
+        img_back_ground = self.pil_from_svg_file('flatland.svg', "Background_Light_green.svg").convert("RGBA")
 
-        self.scenery_background_white = self.pil_from_svg_file('svg', "Background_white.svg")
+        self.scenery_background_white = self.pil_from_svg_file('flatland.svg', "Background_white.svg").convert("RGBA")
 
         self.scenery = []
         for file in scenery_files:
-            img = self.pil_from_svg_file('svg', file)
+            img = self.pil_from_svg_file('flatland.svg', file)
             img = Image.alpha_composite(img_back_ground, img)
             self.scenery.append(img)
 
         self.scenery_d2 = []
         for file in scenery_files_d2:
-            img = self.pil_from_svg_file('svg', file)
+            img = self.pil_from_svg_file('flatland.svg', file)
             img = Image.alpha_composite(img_back_ground, img)
             self.scenery_d2.append(img)
 
         self.scenery_d3 = []
         for file in scenery_files_d3:
-            img = self.pil_from_svg_file('svg', file)
+            img = self.pil_from_svg_file('flatland.svg', file)
             img = Image.alpha_composite(img_back_ground, img)
             self.scenery_d3.append(img)
 
         self.scenery_water = []
         for file in scenery_files_water:
-            img = self.pil_from_svg_file('svg', file)
+            img = self.pil_from_svg_file('flatland.svg', file)
             img = Image.alpha_composite(img_back_ground, img)
             self.scenery_water.append(img)
 
@@ -426,10 +430,10 @@ class PILSVG(PILGL):
                                           whitefilter="Background_white_filter.svg")
 
         # Load station and recolorize them
-        station = self.pil_from_svg_file("svg", "Bahnhof_#d50000_target.svg")
+        station = self.pil_from_svg_file('flatland.svg', "Bahnhof_#d50000_target.svg")
         self.station_colors = self.recolor_image(station, [0, 0, 0], self.agent_colors, False)
 
-        cell_occupied = self.pil_from_svg_file("svg", "Cell_occupied.svg")
+        cell_occupied = self.pil_from_svg_file('flatland.svg', "Cell_occupied.svg")
         self.cell_occupied = self.recolor_image(cell_occupied, [0, 0, 0], self.agent_colors, False)
 
         # Merge them with the regular rails.
@@ -458,14 +462,14 @@ class PILSVG(PILGL):
             transition_16_bit_string = "".join(transition_16_bit)
             binary_trans = int(transition_16_bit_string, 2)
 
-            pil_rail = self.pil_from_svg_file('svg', file)
+            pil_rail = self.pil_from_svg_file('flatland.svg', file).convert("RGBA")
 
             if background_image is not None:
-                img_bg = self.pil_from_svg_file('svg', background_image)
+                img_bg = self.pil_from_svg_file('flatland.svg', background_image).convert("RGBA")
                 pil_rail = Image.alpha_composite(img_bg, pil_rail)
 
             if whitefilter is not None:
-                img_bg = self.pil_from_svg_file('svg', whitefilter)
+                img_bg = self.pil_from_svg_file('flatland.svg', whitefilter).convert("RGBA")
                 pil_rail = Image.alpha_composite(pil_rail, img_bg)
 
             if rotate:
@@ -513,13 +517,13 @@ class PILSVG(PILGL):
             if binary_trans == 0:
                 if self.background_grid[col][row] <= 4 + np.ceil(((col * row + col) % 10) / city_size):
                     a = int(self.background_grid[col][row])
-                    a = a % len(self.dBuildings)
+                    a = a % len(self.lBuildings)
                     if (col + row + col * row) % 13 > 11:
                         pil_track = self.scenery[a % len(self.scenery)]
                     else:
                         if (col + row + col * row) % 3 == 0:
-                            a = (a + (col + row + col * row)) % len(self.dBuildings)
-                        pil_track = self.dBuildings[a]
+                            a = (a + (col + row + col * row)) % len(self.lBuildings)
+                        pil_track = self.lBuildings[a]
                 elif ((self.background_grid[col][row] > 5 + ((col * row + col) % 3)) or
                       ((col ** 3 + row ** 2 + col * row) % 10 == 0)):
                     a = int(self.background_grid[col][row]) - 4
@@ -557,7 +561,7 @@ class PILSVG(PILGL):
 
         if target is not None:
             if is_selected:
-                svgBG = self.pil_from_svg_file("svg", "Selected_Target.svg")
+                svgBG = self.pil_from_svg_file('flatland.svg', "Selected_Target.svg")
                 self.clear_layer(PILGL.SELECTED_TARGET_LAYER, 0)
                 self.draw_image_row_col(svgBG, (row, col), layer=PILGL.SELECTED_TARGET_LAYER)
 
@@ -597,7 +601,7 @@ class PILSVG(PILGL):
         for directions, path_svg in file_directory.items():
             in_direction, out_direction = directions
 
-            pil_zug = self.pil_from_svg_file("svg", path_svg)
+            pil_zug = self.pil_from_svg_file('flatland.svg', path_svg)
 
             # Rotate both the directions and the image and save in the dict
             for rot_direction in range(4):
@@ -627,7 +631,7 @@ class PILSVG(PILGL):
                 self.draw_image_row_col(self.scenery_background_white, (row, col), layer=PILGL.RAIL_LAYER)
 
         if is_selected:
-            bg_svg = self.pil_from_svg_file("svg", "Selected_Agent.svg")
+            bg_svg = self.pil_from_svg_file('flatland.svg', "Selected_Agent.svg")
             self.clear_layer(PILGL.SELECTED_AGENT_LAYER, 0)
             self.draw_image_row_col(bg_svg, (row, col), layer=PILGL.SELECTED_AGENT_LAYER)
         if show_debug:

@@ -35,7 +35,7 @@ class RenderTool(object):
 
         self.agent_render_variant = agent_render_variant
 
-        if gl in ["PIL", "PILSVG", "TKPIL", "TKPILSVG"]:
+        if gl in ["PIL", "PILSVG", "TKPIL", "TKPILSVG", "PGL"]:
             self.renderer = RenderLocal(env, gl, jupyter,
                  agent_render_variant,
                  show_debug, clear_debug_text, screen_width, screen_height)
@@ -213,8 +213,14 @@ class RenderLocal(RenderBase):
             print("Importing TKPILGL - requires a local display!")
             from flatland.utils.graphics_tkpil import TKPILGL
             self.gl = TKPILGL(env.width, env.height, jupyter, screen_width=screen_width, screen_height=screen_height)
+        elif gl in ["PGL"]:
+            # Conditional import
+            print("Importing PGLGL for pyglet - requires a local display!")
+            from flatland.utils.graphics_pgl import PGLGL
+            self.gl = PGLGL(env.width, env.height, jupyter, screen_width=screen_width, screen_height=screen_height)
         else:
-            print("[", gl, "] not found, switch to PILSVG, TKPIL or BROWSER")
+            print("[", gl, "] not found, switch to PGL, PILSVG, TKPIL (deprecated) or BROWSER")
+            print("Using PILSVG.")
             self.gl = PILSVG(env.width, env.height, jupyter, screen_width=screen_width, screen_height=screen_height)
 
         self.new_rail = True
@@ -572,7 +578,7 @@ class RenderLocal(RenderBase):
         """
 
         # if type(self.gl) is PILSVG:
-        if self.gl_str in ["PILSVG", "TKPIL", "TKPILSVG"]:
+        if self.gl_str in ["PILSVG", "TKPIL", "TKPILSVG", "PGL"]:
             self.render_env_svg(show=show,
                                 show_observations=show_observations,
                                 show_predictions=show_predictions,
