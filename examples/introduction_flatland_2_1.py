@@ -344,7 +344,8 @@ for step in range(nSteps):
         break
     print('Episode: Steps {}\t Score = {}'.format(step, score))
 
-    time.sleep(1)
+    #time.sleep(1)
+    env_renderer.gl.idle(0.2)
 
     if in_notebook:
         arrImage = env_renderer.get_image()

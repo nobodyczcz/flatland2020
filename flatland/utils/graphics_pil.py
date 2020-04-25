@@ -194,6 +194,9 @@ class PILGL(GraphicsLayer):
     def pause(self, seconds=0.00001):
         pass
 
+    def idle(self, seconds=0.00001):
+        pass
+
     def alpha_composite_layers(self):
         img = self.layers[0]
         for img2 in self.layers[1:]:
@@ -318,13 +321,13 @@ class PILSVG(PILGL):
 
         imgBg = self.pil_from_svg_file('flatland.svg', "Background_city.svg")
         imgBg = imgBg.convert("RGBA")
-        print("imgBg mode:", imgBg.mode)
+        #print("imgBg mode:", imgBg.mode)
 
         self.lBuildings = []
         for sFile in lBuildingFiles:
-            print("Loading:", sFile)
+            #print("Loading:", sFile)
             img = self.pil_from_svg_file('flatland.svg', sFile)
-            print("img mode:", img.mode)
+            #print("img mode:", img.mode)
             img = Image.alpha_composite(imgBg, img)
             self.lBuildings.append(img)
 
