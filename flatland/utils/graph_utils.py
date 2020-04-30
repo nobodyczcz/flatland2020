@@ -10,8 +10,24 @@ from matplotlib import cm
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.agent_utils import EnvAgent
 from collections import namedtuple
+from recordclass import recordclass, RecordClass
 
 PathInfo = namedtuple("PathInfo", ["nStart", "nTarget", "length", "tPath", "Gpath"])
+#PathReservation = namedtuple("PathReservation", "nStart nTarget nGridStart nGridTarget lnStep lnPause lnPath lnGridPath lnGridStep")
+
+class PathReservation(RecordClass):
+    nStart:tuple
+    nTarget:tuple
+    nGridStart:tuple
+    nGridTarget:tuple
+    lnStep:list       # deprecate?  the time step at which we arrive at this path element.
+    lnPause:list      # deprecate? how long to pause at each path element
+    lnPath:list       # dir nodes in path, once only (ie a long section node appears only once)
+    lnGridPath:list   # grid nodes in path, once only
+    lnGridStep:list   # grid nodes in path for each time step (ie repeated for long sections)
+    lnDirStep:list    # dir nodes - same as lnPath - but repeated for each time step
+    
+
 
 # turn a transition into a string of binary
 def trans_int_to_binstr(intTrans):
@@ -86,16 +102,21 @@ def neighbors(G, nbunch, edge_types=None, outer_edge_types=None):
 
     return lnNeighbors, lEdges
 
-def grid_node_for_rails(G, nbunch):
-    """ Return the grid nodes for a bunch of rail nodes
+def grid_node_for_rails(G, lnRails):
+    """ Return the grid nodes for a bunch of rail nodes (eg a path of rail nodes)
     """
     
     lnGridPath = []
-    for n in nbunch:
+    for nRail in lnRails:
         # find the grid node for this rail node, from the predecessor along its hold edge.
-        nGrid = [ n for n, d in G.pred[n].items() if d["type"]=="hold" ][0]
+
+        # Assumes a rail node has only one hold edge.
+        # nGrid = [ n for n, d in G.pred[nRail].items() if d["type"]=="hold" ][0]
+
+        # alternative - looks for a(the) grid-type predessor node.  Assumes there is exactly one.
+        nGrid = [ nPred for nPred in G.pred[nRail] if G.nodes[nPred]["type"] == "grid" ][0]
         lnGridPath.append(nGrid)
-    
+        
     return lnGridPath
 
 def get_simple_path(G, u):
@@ -208,6 +229,8 @@ def genStartTargetDirs(G, env, shortest=True):
     lltStartTarg = []   # [start, target] for each direction permutation 
                         # as list of 2-lists of 3-tuples (rail nodes)
 
+    lPI = []
+
     nAgents = len(env.agents)
     print("nAgents:", nAgents)
     if True:
@@ -261,6 +284,7 @@ def genStartTargetDirs(G, env, shortest=True):
                     #lnPathShortest = lnPath
                     #GpathShortest = Gpath
                     tPathGraphDirs = (lnPath, Gpath, nStartDir, nEndDir)
+                    oPathInfo = PathInfo(nStartDir, nEndDir, pathLen, lnPath, Gpath)
 
 
             lGpaths.append(tPathGraphDirs[1])
@@ -269,31 +293,41 @@ def genStartTargetDirs(G, env, shortest=True):
 
     return lGpaths, llnPaths, lltStartTarg
 
-def plotResourceUsage(G, llnPaths,
-    llnAltPaths=None,
-    nSteps=500, nStepsShow=200,
-    contradir=False,
-    nResources=50,
-    figsize=(20,8), twostep=False, node_ticks=False, agent_increment=False, vmax=3,
-    grid=True, cmap=None):
 
+def calcConflict(G, lPI,
+    nSteps=500, 
+    twostep=False, 
+    ):
+    """ Create two reservation tables:
+        - dResource - dict[grid node] -> resource usage at step t (0,1,...)
+        - dg2Dirs - dict[grid node] -> NESW x bool usage at step t (0 or 1)
+
+    """
+    
+    llnPaths = [ oPI.tPath for oPI in lPI ]
     # Infer the grid paths for the rail paths
     llnGridPaths = []
-    for lnPath in llnPaths:
-        lnGridPath = []
-        for n in lnPath:
-            # find the grid node for this rail node
-            nGrid = [ n for n, d in G.pred[n].items() if d["type"]=="hold" ][0]
-            lnGridPath.append(nGrid)
+
+        
+    for oPI in lPI:
+        lnGridPath = grid_node_for_rails(G, oPI.tPath)
         llnGridPaths.append(lnGridPath)
+
+        # lnGridPath = []
+        # for n in lnPath:
+        #     # find the grid node for this rail node
+        #     nGrid = [ n for n, d in G.pred[n].items() if d["type"]=="hold" ][0]
+        #     lnGridPath.append(nGrid)
+        
 
     # the grid nodes, each with a vector of utilisation through time
     dResource = OrderedDict()
 
-    # For each grid node, a list of direction nodes used
+    # For each grid node, a list of direction nodes used, ie grid node -> [rail nodes]
     dlRails = OrderedDict()    
 
-    # For each grid node, a matrix of 4 x vectors of utilisation, one for each direction, indexed as above
+    # For each grid node, a matrix of 4 vectors of 0/1 utilisation, T x NESW
+    # (not really NESW, but a list of rail nodes in order of first discovery)
     dg2Dirs = OrderedDict()
 
     for iPath, (lnGridPath, lnPath) in enumerate(list(zip(llnGridPaths, llnPaths))[:]):
@@ -302,30 +336,119 @@ def plotResourceUsage(G, llnPaths,
         # Create a resource for each grid node n
         # increment a counter for each step it is occupied by this agent
         for i in range(len(lnGridPath)):
-            n = lnGridPath[i]
+            nGrid = lnGridPath[i]
             nRail = lnPath[i]
             #print(i,n)
-            if n not in dResource:
-                dResource[n] = np.zeros(nSteps)
-                dlRails[n] = [nRail]  # list of rail nodes used for entry
-                dg2Dirs[n] = np.zeros((nSteps, 4)) # timesteps x "directions" (really, entry nodes)
+            if nGrid not in dResource:
+                dResource[nGrid] = np.zeros(nSteps)
+                dlRails[nGrid] = [nRail]  # list of rail nodes used for entry
+                dg2Dirs[nGrid] = np.zeros((nSteps, 4)) # timesteps x "directions" (really, entry nodes)
                 #print(n, nRail)
             
             # Ensure we have stored the rail node used for this grid node
-            if nRail not in dlRails[n]:
-                dlRails[n].append(nRail)
-            iRail = dlRails[n].index(nRail)
+            if nRail not in dlRails[nGrid]:
+                dlRails[nGrid].append(nRail)
+            iRail = dlRails[nGrid].index(nRail)
             
             # node data for n, the grid node
-            d = G.nodes()[n]
+            d = G.nodes()[nGrid]
             if "l" in d:
                 weight = d["l"]
             else:
                 weight = 1
             
-            g2Dirs = dg2Dirs[n]
+            g2Dirs = dg2Dirs[nGrid]
 
             #print(iPath, n, weight, nRail, iRail)
+
+            # fill in the utilisations for "longer" nodes (contracted paths)
+            for t2 in range(t, t+weight):
+                
+                # increment the resource utilisation
+                #if agent_increment:
+                #    inc = iPath+1
+                #else:
+                #    inc = 1
+                #dResource[nGrid][t2] += inc
+                dResource[nGrid][t2] += 1
+                
+                # Increment the direction utilisation
+                g2Dirs[t2, iRail] += 1
+            t += weight
+
+    a2ResSteps = np.stack(list(dResource.values()))
+    a3ResDirSteps = np.stack(list(dg2Dirs.values()))
+
+    a2ResDirSteps = np.count_nonzero(a3ResDirSteps[:,:,:], axis=2)
+
+    return np.sum(a2ResSteps >= 2)
+
+
+def plotResourceUsage(G, llnPaths,
+    llnAltPaths=None,  # not yet used
+    nSteps=500, nStepsShow=200,
+    contradir=False,
+    nResources=50,
+    figsize=(20,8), twostep=False, node_ticks=False, agent_increment=False, vmax=3,
+    grid=True, cmap=None):
+    """ Create two reservation tables:
+        - dResource - dict[grid node] -> resource usage at step t (0,1,...)
+        - dg2Dirs - dict[grid node] -> NESW x bool usage at step t (0 or 1)
+
+    """
+    # Infer the grid paths for the rail paths
+    llnGridPaths = []
+    for lnPath in llnPaths:
+        lnGridPath = grid_node_for_rails(G, lnPath)
+        # lnGridPath = []
+        # for n in lnPath:
+        #     # find the grid node for this rail node
+        #     nGrid = [ n for n, d in G.pred[n].items() if d["type"]=="hold" ][0]
+        #     lnGridPath.append(nGrid)
+        llnGridPaths.append(lnGridPath)
+
+    # the grid nodes, each with a vector of utilisation through time
+    dResource = OrderedDict()
+
+    # For each grid node, a list of direction nodes used, ie grid node -> [rail nodes]
+    dlRails = OrderedDict()    
+
+    # For each grid node, a matrix of 4 vectors of 0/1 utilisation, T x NESW
+    # (not really NESW, but a list of rail nodes in order of first discovery)
+    dg2Dirs = OrderedDict()
+
+    for iPath, (lnGridPath, lnPath) in enumerate(list(zip(llnGridPaths, llnPaths))[:]):
+        t=0
+        
+        # Create a resource for each grid node n
+        # increment a counter for each step it is occupied by this agent
+        for i in range(len(lnGridPath)):
+            nGrid = lnGridPath[i]
+            nRail = lnPath[i]
+            #print(i,n)
+            if nGrid not in dResource:
+                dResource[nGrid] = np.zeros(nSteps)
+                dlRails[nGrid] = [nRail]  # list of rail nodes used for entry
+                dg2Dirs[nGrid] = np.zeros((nSteps, 4)) # timesteps x "directions" (really, entry nodes)
+                #print(n, nRail)
+            
+            # Ensure we have stored the rail node used for this grid node
+            if nRail not in dlRails[nGrid]:
+                dlRails[nGrid].append(nRail)
+            iRail = dlRails[nGrid].index(nRail)
+            
+            # node data for n, the grid node
+            d = G.nodes()[nGrid]
+            if "l" in d:
+                weight = d["l"]
+            else:
+                weight = 1
+            
+            g2Dirs = dg2Dirs[nGrid]
+
+            #print(iPath, n, weight, nRail, iRail)
+
+            # fill in the utilisations for "longer" nodes (contracted paths)
             for t2 in range(t, t+weight):
                 
                 # increment the resource utilisation
@@ -333,7 +456,7 @@ def plotResourceUsage(G, llnPaths,
                     inc = iPath+1
                 else:
                     inc = 1
-                dResource[n][t2] += inc
+                dResource[nGrid][t2] += inc
                 
                 # Increment the direction utilisation
                 g2Dirs[t2, iRail] += 1
@@ -437,6 +560,39 @@ def hammockPaths(G, nStart, nTarget, endSkip=0, preamble=True, ratioMax=10):
     lPathInfo.sort(key=lambda x:x.length)
     return lPathInfo
     #return llnPaths            
+
+def findConflict():
+    pass
+
+def enrichPath(G, oPI:PathInfo) -> PathReservation:
+    """ Enrich a PathInfo with timings
+    """
+    rCumLen = 0
+    lnStep = [0]
+    lnPause = [0]
+    lnGridPath = []
+    lnGridStep = []
+    lnDirStep = []
+    # walk along the edges in the path of nodes
+    for uv in zip(oPI.tPath[:-1], oPI.tPath[1:]):
+        uvData = G.edges[uv]
+        rLen = uvData["l"]
+        rCumLen += rLen
+        lnStep.append(rCumLen)
+        lnPause.append(0)  # for now just assume zero pause
+
+    lnGridPath = grid_node_for_rails(G, oPI.tPath)
+
+    iStep = 0
+    for vGrid, vDir in zip(lnGridPath, oPI.tPath):
+        nLenV = G.nodes[vGrid].get("l",1)
+        for iStepNode in range(0,nLenV):
+            lnGridStep.append(vGrid)
+            lnDirStep.append(vDir)
+
+    return PathReservation(oPI.nStart, oPI.nTarget, lnGridPath[0], lnGridPath[-1],
+        lnStep, lnPause, oPI.tPath,
+        lnGridPath, lnGridStep, lnDirStep)
 
 class RailEnvGraph(object):
     """
@@ -586,7 +742,12 @@ class RailEnvGraph(object):
     def reduce_simple_paths(self):
         """
         Reduce *linear* paths, ie unbranched chains, into a single node, 
-        preserving length in the edges "l" property
+        preserving length in the dir edges "l" property,
+        and also in an "l" property of (contracted) grid nodes.
+        This function seems unnecessarily complicated!  
+        Possibly a result of the data/graph model, or maybe naive coding.
+
+        After this, rail nodes may end up connected to different grid nodes via their hold edge. (Not sure how)
         """
 
         # Get the grid + rail nodes only, ie remove empty cells.
