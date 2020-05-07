@@ -710,6 +710,13 @@ class RenderLocal(RenderBase):
 
             self.gl.build_background_map(targets)
 
+            # label rows, cols
+            for iRow in range(env.height):
+                self.gl.text_rowcol((iRow, 0), str(iRow), layer=self.gl.RAIL_LAYER)
+            for iCol in range(env.width):
+                self.gl.text_rowcol((0, iCol), str(iCol), layer=self.gl.RAIL_LAYER)
+
+
         if show_agents:
             for agent_idx, agent in enumerate(self.env.agents):
 
@@ -785,6 +792,9 @@ class RenderLocal(RenderBase):
             self.render_observation(range(env.get_num_agents()), env.dev_obs_dict)
         if show_predictions:
             self.render_prediction(range(env.get_num_agents()), env.dev_pred_dict)
+        
+
+
         if show:
             self.gl.show()
         for i in range(3):
