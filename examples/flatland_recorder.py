@@ -30,7 +30,7 @@ class FlatlandRenderWrapper(RailEnv):
     def reset(self, *args, **kwargs):
         if self.use_renderer:
             self.renderer.reset()
-        return super().reset(self, *args, **kwargs)
+        return super().reset(*args, **kwargs)
 
     def render(self, mode='human'):
         """
