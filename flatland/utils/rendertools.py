@@ -58,9 +58,10 @@ class RenderTool(object):
                    frames=False,  # frame counter to show (intended since invocation)
                    episode=None,  # int episode number to show
                    step=None,  # int step number to show in image
-                   selected_agent=None):  # indicate which agent is "selected" in the editor):
-        self.renderer.render_env(show, show_agents, show_inactive_agents, show_observations,
-                    show_predictions, frames, episode, step, selected_agent)
+                   selected_agent=None,  # indicate which agent is "selected" in the editor):
+                   return_image=False): # indicate if image is returned for use in monitor:
+        return self.renderer.render_env(show, show_agents, show_inactive_agents, show_observations,
+                    show_predictions, frames, episode, step, selected_agent, return_image)
 
     def close_window(self):
         self.renderer.close_window()
@@ -138,7 +139,8 @@ class RenderBrowser(RenderBase):
             frames=False,  # frame counter to show (intended since invocation)
             episode=None,  # int episode number to show
             step=None,  # int step number to show in image
-            selected_agent=None):  # indicate which agent is "selected" in the editor):
+            selected_agent=None,  # indicate which agent is "selected" in the editor):
+            return_image=False): # indicate if image is returned for use in monitor:
         
         if not self.background_rendered:
             self.server.send_env_and_wait()
@@ -572,22 +574,24 @@ class RenderLocal(RenderBase):
                    frames=False,  # frame counter to show (intended since invocation)
                    episode=None,  # int episode number to show
                    step=None,  # int step number to show in image
-                   selected_agent=None):  # indicate which agent is "selected" in the editor
+                   selected_agent=None,  # indicate which agent is "selected" in the editor
+                   return_image=False): # indicate if image is returned for use in monitor:
         """ Draw the environment using the GraphicsLayer this RenderTool was created with.
             (Use show=False from a Jupyter notebook with %matplotlib inline)
         """
 
         # if type(self.gl) is PILSVG:
         if self.gl_str in ["PILSVG", "TKPIL", "TKPILSVG", "PGL"]:
-            self.render_env_svg(show=show,
+            return self.render_env_svg(show=show,
                                 show_observations=show_observations,
                                 show_predictions=show_predictions,
                                 selected_agent=selected_agent,
                                 show_agents=show_agents,
-                                show_inactive_agents=show_inactive_agents
+                                show_inactive_agents=show_inactive_agents,
+                                return_image=return_image
                                 )
         else:
-            self.render_env_pil(show=show,
+            return self.render_env_pil(show=show,
                                 show_agents=show_agents,
                                 show_inactive_agents=show_inactive_agents,
                                 show_observations=show_observations,
@@ -595,7 +599,8 @@ class RenderLocal(RenderBase):
                                 frames=frames,
                                 episode=episode,
                                 step=step,
-                                selected_agent=selected_agent
+                                selected_agent=selected_agent,
+                                return_image=return_image
                                 )
 
     def _draw_square(self, center, size, color, opacity=255, layer=0):
@@ -618,7 +623,8 @@ class RenderLocal(RenderBase):
                        frames=False,  # frame counter to show (intended since invocation)
                        episode=None,  # int episode number to show
                        step=None,  # int step number to show in image
-                       selected_agent=None  # indicate which agent is "selected" in the editor
+                       selected_agent=None,  # indicate which agent is "selected" in the editor
+                       return_image=False # indicate if image is returned for use in monitor:
                        ):
 
         if type(self.gl) is PILGL:
@@ -666,11 +672,13 @@ class RenderLocal(RenderBase):
 
         self.gl.pause(0.00001)
 
+        if return_image:
+            return self.get_image()
         return
 
     def render_env_svg(
         self, show=False, show_observations=True, show_predictions=False, selected_agent=None,
-        show_agents=True, show_inactive_agents=False
+        show_agents=True, show_inactive_agents=False, return_image=False
     ):
         """
         Renders the environment with SVG support (nice image)
@@ -801,6 +809,8 @@ class RenderLocal(RenderBase):
             self.gl.process_events()
 
         self.frame_nr += 1
+        if return_image:
+            return self.get_image()
         return
 
     def close_window(self):
