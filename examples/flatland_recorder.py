@@ -57,7 +57,6 @@ class FlatlandRenderWrapper(RailEnv):
     def update_renderer(self, mode='human'):
         image = self.renderer.render_env(show=True, show_observations=False, show_predictions=False,
                                              return_image=True)
-        print(image.shape)
         return image[:,:,:3]
 
     def set_renderer(self, renderer):
