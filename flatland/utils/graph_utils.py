@@ -26,6 +26,7 @@ class PathReservation(RecordClass):
     lnGridPath:list   # grid nodes in path, once only
     lnGridStep:list   # grid nodes in path for each time step (ie repeated for long sections)
     lnDirStep:list    # dir nodes - same as lnPath - but repeated for each time step
+    lUVStep:list      # list of (u,v) tuples eg ((1,2),(1,3)), front-padded with (0,0) 
     
 
 
@@ -565,7 +566,7 @@ def findConflict():
     pass
 
 def enrichPath(G, oPI:PathInfo) -> PathReservation:
-    """ Enrich a PathInfo with timings
+    """ Enrich a PathInfo with timings etc
     """
     rCumLen = 0
     lnStep = [0]
@@ -573,6 +574,7 @@ def enrichPath(G, oPI:PathInfo) -> PathReservation:
     lnGridPath = []
     lnGridStep = []
     lnDirStep = []
+    lUVStep = []
     # walk along the edges in the path of nodes
     for uv in zip(oPI.tPath[:-1], oPI.tPath[1:]):
         uvData = G.edges[uv]
@@ -584,15 +586,18 @@ def enrichPath(G, oPI:PathInfo) -> PathReservation:
     lnGridPath = grid_node_for_rails(G, oPI.tPath)
 
     iStep = 0
+    vPred = (0,0)
     for vGrid, vDir in zip(lnGridPath, oPI.tPath):
         nLenV = G.nodes[vGrid].get("l",1)
         for iStepNode in range(0,nLenV):
             lnGridStep.append(vGrid)
             lnDirStep.append(vDir)
+            lUVStep.append((vPred, vGrid))
+        vPred = vGrid
 
     return PathReservation(oPI.nStart, oPI.nTarget, lnGridPath[0], lnGridPath[-1],
         lnStep, lnPause, oPI.tPath,
-        lnGridPath, lnGridStep, lnDirStep)
+        lnGridPath, lnGridStep, lnDirStep, lUVStep)
 
 class RailEnvGraph(object):
     """
