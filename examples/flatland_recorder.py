@@ -19,7 +19,7 @@ class FlatlandRenderWrapper(RailEnv):
     def __init__(self, use_renderer=False, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.use_renderer = use_renderer
-        self.env_renderer = None
+        self.renderer = None
         self.metadata = {
             'render.modes': ['human', 'rgb_array'],
             'video.frames_per_second': 10
@@ -29,7 +29,7 @@ class FlatlandRenderWrapper(RailEnv):
 
     def reset(self, *args, **kwargs):
         if self.use_renderer:
-            self.env_renderer.reset()
+            self.renderer.reset()
         return super().reset(self, *args, **kwargs)
 
     def render(self, mode='human'):
@@ -41,21 +41,21 @@ class FlatlandRenderWrapper(RailEnv):
         if not self.use_renderer:
             return
 
-        if not self.env_renderer:
+        if not self.renderer:
             self.initialize_renderer(mode=mode)
 
         return self.update_renderer(mode=mode)
 
     def initialize_renderer(self, mode="human"):
         # Initiate the renderer
-        self.env_renderer = RenderTool(self, gl="PGL",  # gl="TKPILSVG",
+        self.renderer = RenderTool(self, gl="PGL",  # gl="TKPILSVG",
                                        agent_render_variant=AgentRenderVariant.ONE_STEP_BEHIND,
                                        show_debug=False,
                                        screen_height=600,  # Adjust these parameters to fit your resolution
                                        screen_width=800)  # Adjust these parameters to fit your resolution
 
     def update_renderer(self, mode='human'):
-        image = self.env_renderer.render_env(show=True, show_observations=False, show_predictions=False,
+        image = self.renderer.render_env(show=True, show_observations=False, show_predictions=False,
                                              return_image=True)
         return image
 
@@ -65,9 +65,9 @@ class FlatlandRenderWrapper(RailEnv):
             self.initialize_renderer(mode=self.use_renderer)
 
     def close(self):
-        if self.env_renderer:
-            self.env_renderer.close_window()
-            self.env_renderer = None
+        if self.renderer:
+            self.renderer.close_window()
+            self.renderer = None
 
 import numpy as np  # noqa e402
 
