@@ -20,10 +20,23 @@ from flatland.core.grid.grid_utils import IntVector2D
 from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.agent_utils import EnvAgent, RailAgentStatus
 from flatland.envs.distance_map import DistanceMap
-from flatland.envs.malfunction_generators import no_malfunction_generator, Malfunction, MalfunctionProcessData
+
+# Need to use circular imports for persistence.
+from flatland.envs import malfunction_generators as mal_gen
+from flatland.envs import rail_generators as rail_gen
+from flatland.envs import schedule_generators as sched_gen
+
+# Direct import of objects / classes does not work with circular imports.
+# from flatland.envs.malfunction_generators import no_malfunction_generator, Malfunction, MalfunctionProcessData
+# from flatland.envs.observations import GlobalObsForRailEnv
+# from flatland.envs.rail_generators import random_rail_generator, RailGenerator
+# from flatland.envs.schedule_generators import random_schedule_generator, ScheduleGenerator
+
 from flatland.envs.observations import GlobalObsForRailEnv
-from flatland.envs.rail_generators import random_rail_generator, RailGenerator
-from flatland.envs.schedule_generators import random_schedule_generator, ScheduleGenerator
+
+
+
+import pickle
 
 m.patch()
 
@@ -116,11 +129,11 @@ class RailEnv(Environment):
     def __init__(self,
                  width,
                  height,
-                 rail_generator: RailGenerator = random_rail_generator(),
-                 schedule_generator: ScheduleGenerator = random_schedule_generator(),
+                 rail_generator: rail_gen.RailGenerator = rail_gen.random_rail_generator(),
+                 schedule_generator: sched_gen.ScheduleGenerator = sched_gen.random_schedule_generator(),
                  number_of_agents=1,
                  obs_builder_object: ObservationBuilder = GlobalObsForRailEnv(),
-                 malfunction_generator_and_process_data=no_malfunction_generator(),
+                 malfunction_generator_and_process_data=None, #mal_gen.no_malfunction_generator(),
                  remove_agents_at_target=True,
                  random_seed=1,
                  record_steps=False
@@ -162,6 +175,8 @@ class RailEnv(Environment):
         """
         super().__init__()
 
+        if malfunction_generator_and_process_data is None:
+            malfunction_generator_and_process_data = mal_gen.no_malfunction_generator()
         self.malfunction_generator, self.malfunction_process_data = malfunction_generator_and_process_data
         self.rail_generator: RailGenerator = rail_generator
         self.schedule_generator: ScheduleGenerator = schedule_generator
@@ -832,159 +847,7 @@ class RailEnv(Environment):
         """
         return Grid4Transitions.get_entry_directions(self.rail.get_full_transitions(row, col))
 
-    def get_full_state_msg(self) -> Packer:
-        """
-        Returns state of environment in msgpack object
-        """
-        grid_data = self.rail.grid.tolist()
-        agent_data = [agent.to_agent() for agent in self.agents]
-        malfunction_data: MalfunctionProcessData = self.malfunction_process_data
-        msgpack.packb(grid_data, use_bin_type=True)
-        msgpack.packb(agent_data, use_bin_type=True)
-        msg_data = {
-            "grid": grid_data,
-            "agents": agent_data,
-            "malfunction": malfunction_data}
-        return msgpack.packb(msg_data, use_bin_type=True)
 
-    def get_agent_state_msg(self) -> Packer:
-        """
-        Returns agents information in msgpack object
-        """
-        agent_data = [agent.to_agent() for agent in self.agents]
-        msg_data = {
-            "agents": agent_data}
-        return msgpack.packb(msg_data, use_bin_type=True)
-
-    def get_full_state_dist_msg(self) -> Packer:
-        """
-        Returns environment information with distance map information as msgpack object
-        """
-        grid_data = self.rail.grid.tolist()
-        agent_data = [agent.to_agent() for agent in self.agents]
-
-        # I think these calls do nothing - they create packed data and it is discarded
-        msgpack.packb(grid_data, use_bin_type=True)
-        msgpack.packb(agent_data, use_bin_type=True)
-
-        distance_map_data = self.distance_map.get()
-        malfunction_data: MalfunctionProcessData = self.malfunction_process_data
-        msgpack.packb(distance_map_data, use_bin_type=True)  # does nothing
-        msg_data = {
-            "grid": grid_data,
-            "agents": agent_data,
-            "distance_map": distance_map_data,
-            "malfunction": malfunction_data}
-        return msgpack.packb(msg_data, use_bin_type=True)
-
-    def set_full_state_msg(self, msg_data):
-        """
-        Sets environment state with msgdata object passed as argument
-
-        Parameters
-        -------
-        msg_data: msgpack object
-        """
-        data = msgpack.unpackb(msg_data, use_list=False, encoding='utf-8')
-        self.rail.grid = np.array(data["grid"])
-        # agents are always reset as not moving
-        if "agents_static" in data:
-            self.agents = EnvAgent.load_legacy_static_agent(data["agents_static"])
-        else:
-            self.agents = [EnvAgent(*d[0:12]) for d in data["agents"]]
-        # setup with loaded data
-        self.height, self.width = self.rail.grid.shape
-        self.rail.height = self.height
-        self.rail.width = self.width
-        self.dones = dict.fromkeys(list(range(self.get_num_agents())) + ["__all__"], False)
-
-    def set_full_state_dist_msg(self, msg_data):
-        """
-        Sets environment grid state and distance map with msgdata object passed as argument
-
-        Parameters
-        -------
-        msg_data: msgpack object
-        """
-        data = msgpack.unpackb(msg_data, use_list=False, encoding='utf-8')
-        self.rail.grid = np.array(data["grid"])
-        # agents are always reset as not moving
-        if "agents_static" in data:
-            self.agents = EnvAgent.load_legacy_static_agent(data["agents_static"])
-        else:
-            self.agents = [EnvAgent(*d[0:12]) for d in data["agents"]]
-        if "distance_map" in data.keys():
-            self.distance_map.set(data["distance_map"])
-        # setup with loaded data
-        self.height, self.width = self.rail.grid.shape
-        self.rail.height = self.height
-        self.rail.width = self.width
-        self.dones = dict.fromkeys(list(range(self.get_num_agents())) + ["__all__"], False)
-
-    def save(self, filename, save_distance_maps=False):
-        """
-        Saves environment and distance map information in a file
-
-        Parameters:
-        ---------
-        filename: string
-        save_distance_maps: bool
-        """
-        if save_distance_maps is True:
-            if self.distance_map.get() is not None:
-                if len(self.distance_map.get()) > 0:
-                    with open(filename, "wb") as file_out:
-                        file_out.write(self.get_full_state_dist_msg())
-                else:
-                    print("[WARNING] Unable to save the distance map for this environment, as none was found !")
-
-            else:
-                print("[WARNING] Unable to save the distance map for this environment, as none was found !")
-
-        else:
-            with open(filename, "wb") as file_out:
-                file_out.write(self.get_full_state_msg())
-
-    def save_episode(self, filename):
-        #episode_data = self.cur_episode
-        # msgpack.packb(episode_data, use_bin_type=True)
-        dict_data = {
-            "episode": self.cur_episode,
-            "shape": (self.width, self.height)
-        }
-        # msgpack.packb(msg_data, use_bin_type=True)
-        with open(filename, "wb") as file_out:
-            file_out.write(msgpack.packb(dict_data))
-
-    def load(self, filename):
-        """
-        Load environment with distance map from a file
-
-        Parameters:
-        -------
-        filename: string
-        """
-        with open(filename, "rb") as file_in:
-            load_data = file_in.read()
-            self.set_full_state_dist_msg(load_data)
-
-    def load_pkl(self, pkl_data):
-        """
-        Load environment with distance map from a pickle file
-
-        Parameters:
-        -------
-        pkl_data: pickle file
-        """
-        self.set_full_state_msg(pkl_data)
-
-    def load_resource(self, package, resource):
-        """
-        Load environment with distance map from a binary
-        """
-        from importlib_resources import read_binary
-        load_data = read_binary(package, resource)
-        self.set_full_state_msg(load_data)
 
     def _exp_distirbution_synced(self, rate: float) -> float:
         """

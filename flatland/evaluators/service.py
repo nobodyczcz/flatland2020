@@ -26,6 +26,8 @@ from flatland.envs.schedule_generators import schedule_from_file
 from flatland.evaluators import aicrowd_helpers
 from flatland.evaluators import messages
 from flatland.utils.rendertools import RenderTool
+from flatland.envs.rail_env_utils import load_flatland_environment_from_file
+from flatland.envs.persistence import RailEnvPersister
 
 use_signals_in_timeout = True
 if os.name == 'nt':
@@ -82,8 +84,9 @@ class FlatlandRemoteEvaluationService:
                  video_generation_envs=[],
                  report=None,
                  verbose=False,
-                 actionDir=None,
-                 episodeDir=None
+                 actionDir=None,   # deprecated - use mergeDir
+                 episodeDir=None,  # deprecated - use mergeDir
+                 mergeDir=None,
                  ):
 
         # Test Env folder Paths
@@ -157,7 +160,17 @@ class FlatlandRemoteEvaluationService:
             os.mkdir(self.vizualization_folder_name)
         
         self.actionDir = actionDir
+        if actionDir and not os.path.exists(self.actionDir):
+            os.makedirs(self.actionDir)
+
         self.episodeDir = episodeDir
+        if episodeDir and not os.path.exists(self.episodeDir):
+            os.makedirs(self.episodeDir)
+
+        self.mergeDir = mergeDir
+        if mergeDir and not os.path.exists(self.mergeDir):
+            os.makedirs(self.mergeDir)
+
 
     def update_running_mean_stats(self, key, scalar):
         """
@@ -192,9 +205,13 @@ class FlatlandRemoteEvaluationService:
                 ├── .......
                 └── Level_99.pkl
         """
+        print("Test_env_folder: ", self.test_env_folder)
+
         env_paths = \
-            sorted(glob.glob(os.path.join(self.test_env_folder,"*/*.pkl"))) + \
-            sorted(glob.glob(os.path.join(self.test_env_folder,"*/*.mpk")))
+            sorted(glob.glob(os.path.join(self.test_env_folder,"envs/*.pkl"))) + \
+            sorted(glob.glob(os.path.join(self.test_env_folder,"envs/*.mpk")))
+
+        print("env_paths:", len(env_paths))
 
         # Remove the root folder name from the individual
         # lists, so that we only have the path relative
@@ -275,7 +292,8 @@ class FlatlandRemoteEvaluationService:
         command = msgpack.unpackb(
             command,
             object_hook=m.decode,
-            encoding="utf8"
+            strict_map_key=False,   # msgpack 1.0
+            #encoding="utf8"        # msgpack 1.0
         )
         if self.verbose:
             print("Received Request : ", command)
@@ -448,6 +466,10 @@ class FlatlandRemoteEvaluationService:
                 self.env.get_num_agents()
             )
 
+        # record the actions before checking for done
+        if self.actionDir is not None:
+            self.lActions.append(action)
+
         if done["__all__"]:
             # Compute percentage complete
             complete = 0
@@ -463,6 +485,10 @@ class FlatlandRemoteEvaluationService:
             
             if self.episodeDir is not None:
                 self.save_episode()
+
+            if self.mergeDir is not None:
+                self.save_merged_env()
+
 
         # Record Frame
         if self.visualize:
@@ -484,8 +510,7 @@ class FlatlandRemoteEvaluationService:
                     ))
                 self.record_frame_step += 1
 
-        if self.actionDir is not None:
-            self.lActions.append(action)
+
 
     def save_actions(self):
         sfEnv = self.env_file_paths[self.simulation_count]
@@ -494,6 +519,9 @@ class FlatlandRemoteEvaluationService:
 
         print("env path: ", sfEnv, " sfActions:", sfActions)
 
+        if not os.path.exists(os.path.dirname(sfActions)):
+            os.makedirs(os.path.dirname(sfActions))
+        
         with open(sfActions, "w") as fOut:
             json.dump(self.lActions, fOut)
 
@@ -503,8 +531,21 @@ class FlatlandRemoteEvaluationService:
         sfEnv = self.env_file_paths[self.simulation_count]
         sfEpisode = self.episodeDir + "/" + sfEnv
         print("env path: ", sfEnv, " sfEpisode:", sfEpisode)
-        self.env.save_episode(sfEpisode)
-        
+        RailEnvPersister.save_episode(self.env, sfEpisode)
+        #self.env.save_episode(sfEpisode)
+    
+    def save_merged_env(self):
+        sfEnv = self.env_file_paths[self.simulation_count]
+        sfMergeEnv = self.mergeDir + "/" + sfEnv
+
+        if not os.path.exists(os.path.dirname(sfMergeEnv)):
+            os.makedirs(os.path.dirname(sfMergeEnv))
+
+        print("Input env path: ", sfEnv, " Merge File:", sfMergeEnv)
+        RailEnvPersister.save_episode(self.env, sfMergeEnv)
+        #self.env.save_episode(sfMergeEnv)
+
+
     def handle_env_submit(self, command):
         """
         Handles a ENV_SUBMIT command from the client
@@ -715,6 +756,7 @@ if __name__ == "__main__":
                         dest='service_id',
                         default='FLATLAND_RL_SERVICE_ID',
                         required=False)
+
     parser.add_argument('--test_folder',
                         dest='test_folder',
                         default="../../../submission-scoring/Envs-Small",
@@ -724,15 +766,20 @@ if __name__ == "__main__":
     parser.add_argument('--actionDir',
                         dest='actionDir',
                         default=None,
-                        help="Folder containing the files for the test envs",
+                        help="deprecated - use mergeDir.  Folder containing the files for the test envs",
                         required=False)
     
     parser.add_argument('--episodeDir',
                         dest='episodeDir',
                         default=None,
-                        help="Folder containing the files for the test envs",
+                        help="deprecated - use mergeDir.   Folder containing the files for the test envs",
                         required=False)
     
+    parser.add_argument('--mergeDir',
+                        dest='mergeDir',
+                        default=None,
+                        help="Folder to store merged envs, actions, episodes.",
+                        required=False)
 
     args = parser.parse_args()
 
@@ -745,7 +792,8 @@ if __name__ == "__main__":
         visualize=True,
         video_generation_envs=["Test_0/Level_1.pkl"],
         actionDir=args.actionDir,
-        episodeDir=args.episodeDir
+        episodeDir=args.episodeDir,
+        mergeDir=args.mergeDir
     )
     result = grader.run()
     if result['type'] == messages.FLATLAND_RL.ENV_SUBMIT_RESPONSE:

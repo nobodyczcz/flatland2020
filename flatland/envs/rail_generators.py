@@ -4,6 +4,7 @@ import warnings
 from typing import Callable, Tuple, Optional, Dict, List
 
 import msgpack
+import pickle
 import numpy as np
 from numpy.random.mtrand import RandomState
 
@@ -16,6 +17,8 @@ from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.grid4_generators_utils import connect_rail_in_grid_map, connect_straight_line_in_grid_map, \
     fix_inner_nodes, align_cell_to_city
+
+from flatland.envs import persistence
 
 RailGeneratorProduct = Tuple[GridTransitionMap, Optional[Dict]]
 RailGenerator = Callable[[int, int, int, int], RailGeneratorProduct]
@@ -239,22 +242,41 @@ def rail_from_file(filename, load_from_package=None) -> RailGenerator:
         the matrix of correct 16-bit bitmaps for each rail_spec_of_cell.
     """
 
-    def generator(width: int, height: int, num_agents: int, num_resets: int = 0,
-                  np_random: RandomState = None) -> RailGenerator:
-        rail_env_transitions = RailEnvTransitions()
-        if load_from_package is not None:
-            from importlib_resources import read_binary
-            load_data = read_binary(load_from_package, filename)
-        else:
-            with open(filename, "rb") as file_in:
-                load_data = file_in.read()
-        data = msgpack.unpackb(load_data, use_list=False)
+    # def deprecated_generator(width: int, height: int, num_agents: int, num_resets: int = 0,
+    #               np_random: RandomState = None) -> RailGenerator:
+    #     rail_env_transitions = RailEnvTransitions()
+    #     if load_from_package is not None:
+    #         from importlib_resources import read_binary
+    #         load_data = read_binary(load_from_package, filename)
+    #     else:
+    #         with open(filename, "rb") as file_in:
+    #             load_data = file_in.read()
 
-        grid = np.array(data[b"grid"])
+    #     if filename.endswith("mpk"):
+    #         data = msgpack.unpackb(load_data, use_list=False, encoding="utf-8")
+    #     elif filename.endswith("pkl"):
+    #         data = pickle.loads(load_data)
+
+    #     grid = np.array(data["grid"])
+    #     rail = GridTransitionMap(width=np.shape(grid)[1], height=np.shape(grid)[0], transitions=rail_env_transitions)
+    #     rail.grid = grid
+    #     if "distance_map" in data.keys():
+    #         distance_map = data["distance_map"]
+    #         if len(distance_map) > 0:
+    #             return rail, {'distance_map': distance_map}
+    #     return [rail, None]
+
+    def generator(width: int, height: int, num_agents: int, num_resets: int = 0,
+                  np_random: RandomState = None) -> List:
+
+        env_dict = persistence.RailEnvPersister.load_env_dict(filename, load_from_package=load_from_package)
+
+        rail_env_transitions = RailEnvTransitions()
+        grid = np.array(env_dict["grid"])
         rail = GridTransitionMap(width=np.shape(grid)[1], height=np.shape(grid)[0], transitions=rail_env_transitions)
         rail.grid = grid
-        if b"distance_map" in data.keys():
-            distance_map = data[b"distance_map"]
+        if "distance_map" in env_dict:
+            distance_map = env_dict["distance_map"]
             if len(distance_map) > 0:
                 return rail, {'distance_map': distance_map}
         return [rail, None]

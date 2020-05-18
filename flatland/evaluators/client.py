@@ -147,7 +147,9 @@ class FlatlandRemoteClient(object):
             _response = msgpack.unpackb(
                 _response,
                 object_hook=m.decode,
-                encoding="utf8")
+                strict_map_key=False  # new for msgpack 1.0?
+                #encoding="utf8"  # remove for msgpack 1.0
+                )
             if _response['type'] == messages.FLATLAND_RL.ERROR:
                 raise Exception(str(_response["payload"]))
             else:
