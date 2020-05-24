@@ -247,6 +247,7 @@ class RenderLocal(RenderBase):
         for agent_idx, agent in enumerate(self.env.agents):
             if agent is None:
                 continue
+            print(f"updatebg: {agent_idx} {agent.target}")
             targets[tuple(agent.target)] = agent_idx
         self.gl.build_background_map(targets)
 
