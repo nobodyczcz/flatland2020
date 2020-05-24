@@ -5,16 +5,37 @@ from flatland.envs.rail_generators import sparse_rail_generator
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.malfunction_generators import malfunction_from_params, MalfunctionParameters
-from gym import wrappers
+from gym.wrappers import monitor
+import gym
 
+def _after_step(self, observation, reward, done, info):
+    if not self.enabled: return done
 
-class FlatlandRenderWrapper(RailEnv):
+    if type(done)== dict:
+        _done_check = done['__all__']
+    else:
+        _done_check =  done
+    if _done_check and self.env_semantics_autoreset:
+        print("Done - Patched Monitor Close!!!")
+        # For envs with BlockingReset wrapping VNCEnv, this observation will be the first one of the new episode
+        self.reset_video_recorder()
+        self.episode_id += 1
+        self._flush()
 
-    reward_range = (-float('inf'), float('inf'))
-    spec = None
+    # Record stats
+    # self.stats_recorder.after_step(observation, reward, done, info)
+    # Record video
+    self.video_recorder.capture_frame()
+
+    return done
+
+class FlatlandRenderWrapper(RailEnv,gym.Env):
+
+    # reward_range = (-float('inf'), float('inf'))
+    # spec = None
 
     # Set these in ALL subclasses
-    observation_space = None
+    # observation_space = None
 
     def __init__(self, use_renderer=False, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -22,7 +43,8 @@ class FlatlandRenderWrapper(RailEnv):
         self.renderer = None
         self.metadata = {
             'render.modes': ['human', 'rgb_array'],
-            'video.frames_per_second': 10
+            'video.frames_per_second': 10,
+            'semantics.autoreset': True
         }
         if self.use_renderer:
             self.initialize_renderer()
@@ -65,15 +87,20 @@ class FlatlandRenderWrapper(RailEnv):
             self.initialize_renderer(mode=self.use_renderer)
 
     def close(self):
+        super().close()
         if self.renderer:
-            self.renderer.close_window()
-            self.renderer = None
+            try:
+                self.renderer.close_window()
+                self.renderer = None
+            except Exception as e:
+                # TODO: This causes an error with RLLib
+                print("Could Not close window due to:",e)
 
 import numpy as np  # noqa e402
 
 width = 25  # With of map
 height = 25  # Height of map
-nr_trains = 10  # Number of trains that have an assigned task in the env
+nr_trains = 3  # Number of trains that have an assigned task in the env
 cities_in_map = 2  # Number of cities where agents can start or end
 
 
@@ -120,10 +147,15 @@ env = FlatlandRenderWrapper(width=width,
                             number_of_agents=nr_trains,
                             obs_builder_object=observation_builder,
                             malfunction_generator_and_process_data=malfunction_from_params(stochastic_data),
-                            remove_agents_at_target=True,
-                            use_renderer='human')
-env = wrappers.Monitor(env, "videos", force=True)
+                            remove_agents_at_target=True,)
+                            #use_renderer='human')
 
+# Monkey Patching for Multi-Agent
+monitor.FILE_PREFIX = "flatland"
+monitor.Monitor._after_step =_after_step
+
+env = monitor.Monitor(env, "videos",force=True)
+env.set_renderer('human')
 env.reset()
 
 NUMBER_OF_AGENTS = env.get_num_agents()
@@ -139,9 +171,15 @@ def my_controller():
     return _action
 
 
-for step in range(100):
+for step in range(1000):
 
     _action = my_controller()
     obs, all_rewards, done, info = env.step(_action)
     print("Rewards: {}, [done={}]".format(all_rewards, done))
+    print(50*"=")
+    if done['__all__']:
+        env.close()
+        print("Done")
+        break
+
 
