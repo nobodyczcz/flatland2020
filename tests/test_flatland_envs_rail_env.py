@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import numpy as np
+import os
 
+import flatland
 from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.agent_utils import EnvAgent
@@ -18,11 +20,15 @@ from flatland.envs.persistence import RailEnvPersister
 
 
 def test_load_env():
-    #env = RailEnv(10, 10)
-    #env.reset()
-    # env.load_resource('env_data.tests', 'test-10x10.mpk')
-    #env, env_dict = RailEnvPersister.load_resource("env_data.tests", "test-10x10.mpk")
-    env, env_dict = RailEnvPersister.load_new("./env_data/tests/test-10x10.mpk")
+    # TODO: Refactor this to use importlib_resources
+    import os
+    import flatland
+    env_dump_path = os.path.join(
+        flatland.__path__[0], "..",
+        "env_data", "tests",
+        "test-10x10.mpk"
+    )
+    env, env_dict = RailEnvPersister.load_new(env_dump_path)
 
     agent_static = EnvAgent((0, 0), 2, (5, 5), False)
     env.add_agent(agent_static)

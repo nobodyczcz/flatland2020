@@ -4,18 +4,12 @@ import pickle
 import msgpack
 import numpy as np
 
-from flatland.envs import rail_env 
+from flatland.envs import rail_env
 
-#from flatland.core.env import Environment
 from flatland.core.env_observation_builder import DummyObservationBuilder
-#from flatland.core.grid.grid4 import Grid4TransitionsEnum, Grid4Transitions
-#from flatland.core.grid.grid4_utils import get_new_position
-#from flatland.core.grid.grid_utils import IntVector2D
 from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.agent_utils import Agent, EnvAgent, RailAgentStatus
 from flatland.envs.distance_map import DistanceMap
-
-#from flatland.envs.observations import GlobalObsForRailEnv
 
 # cannot import objects / classes directly because of circular import
 from flatland.envs import malfunction_generators as mal_gen
@@ -38,14 +32,8 @@ class RailEnvPersister(object):
 
         env_dict = cls.get_full_state(env)
 
-        #print(f"env save - agents: {env_dict['agents'][0]}")
-        #a0 = env_dict["agents"][0]
-        #print("agent type:", type(a0))
-
-
-
         if save_distance_maps is True:
-            oDistMap = env.distance_map.get() 
+            oDistMap = env.distance_map.get()
             if oDistMap is not None:
                 if len(oDistMap) > 0:
                     env_dict["distance_map"] = oDistMap
@@ -58,30 +46,20 @@ class RailEnvPersister(object):
 
             if filename.endswith("mpk"):
                 data = msgpack.packb(env_dict)
-                
-                
+
             elif filename.endswith("pkl"):
                 data = pickle.dumps(env_dict)
-                #pickle.dump(env_dict, file_out)
 
             file_out.write(data)
 
-        #with open(filename, "rb") as file_in:
         if filename.endswith("mpk"):
-            #bytes_in = file_in.read()
             dIn = msgpack.unpackb(data, encoding="utf-8")
-            #print(f"msgpack check - {dIn.keys()}")
-            #print(f"msgpack check - {dIn['agents'][0]}")
-
-                
 
     @classmethod
     def save_episode(cls, env, filename):
         dict_env = cls.get_full_state(env)
-        
+
         lAgents = dict_env["agents"]
-        #print("Saving agents:", len(lAgents))
-        #print("Agent 0:", type(lAgents[0]), lAgents[0])
 
         dict_env["episode"] = env.cur_episode
         dict_env["actions"] = env.list_actions
@@ -93,7 +71,6 @@ class RailEnvPersister(object):
                 file_out.write(msgpack.packb(dict_env))
             elif filename.endswith(".pkl"):
                 pickle.dump(dict_env, file_out)
-
 
     @classmethod
     def load(cls, env, filename, load_from_package=None):
@@ -112,16 +89,15 @@ class RailEnvPersister(object):
 
         env_dict = cls.load_env_dict(filename, load_from_package=load_from_package)
 
-
         # TODO: inefficient - each one of these generators loads the complete env file.
         env = rail_env.RailEnv(width=1, height=1,
-                rail_generator=rail_gen.rail_from_file(filename),
-                schedule_generator=sched_gen.schedule_from_file(filename),
-                malfunction_generator_and_process_data=mal_gen.malfunction_from_file(filename),
-                obs_builder_object=DummyObservationBuilder(),
-                record_steps=True)
+                               rail_generator=rail_gen.rail_from_file(filename),
+                               schedule_generator=sched_gen.schedule_from_file(filename),
+                               malfunction_generator_and_process_data=mal_gen.malfunction_from_file(filename),
+                               obs_builder_object=DummyObservationBuilder(),
+                               record_steps=True)
 
-        env.rail = GridTransitionMap(1,1) # dummy        
+        env.rail = GridTransitionMap(1, 1)  # dummy
 
         cls.set_full_state(env, env_dict)
 
@@ -129,7 +105,8 @@ class RailEnvPersister(object):
 
     @classmethod
     def load_env_dict(cls, filename, load_from_package=None):
-
+        
+        print(load_from_package)
         if load_from_package is not None:
             from importlib_resources import read_binary
             load_data = read_binary(load_from_package, filename)
@@ -144,10 +121,9 @@ class RailEnvPersister(object):
         else:
             print(f"filename {filename} must end with either pkl or mpk")
             env_dict = {}
-        
+
         if "agents" in env_dict:
             env_dict["agents"] = [EnvAgent(*d[0:12]) for d in env_dict["agents"]]
-            #print(f"env_dict agents: {env_dict['agents']}")
 
         return env_dict
 
@@ -156,16 +132,6 @@ class RailEnvPersister(object):
         """
         Load environment (with distance map?) from a binary
         """
-        #from importlib_resources import read_binary
-        #load_data = read_binary(package, resource)
-
-        #if resource.endswith("pkl"):
-        #    env_dict = pickle.loads(load_data)
-        #elif resource.endswith("mpk"):
-        #    env_dict = msgpack.unpackb(load_data, encoding="utf-8")
-        
-        #cls.set_full_state(env, env_dict)
-
         return cls.load_new(resource, load_from_package=package)
 
     @classmethod
@@ -178,14 +144,14 @@ class RailEnvPersister(object):
         env_dict: dict
         """
         env.rail.grid = np.array(env_dict["grid"])
-        
+
         # agents are always reset as not moving
         if "agents_static" in env_dict:
             # no idea if this still works
             env.agents = EnvAgent.load_legacy_static_agent(env_dict["agents_static"])
         else:
             agents_data = env_dict["agents"]
-            if len(agents_data)>0:
+            if len(agents_data) > 0:
                 if type(agents_data[0]) is EnvAgent:
                     env.agents = agents_data
                 else:
@@ -209,7 +175,6 @@ class RailEnvPersister(object):
 
         # msgpack cannot persist EnvAgent so use the Agent namedtuple.
         agent_data = [agent.to_agent() for agent in env.agents]
-        #print("get_full_state - agent_data:", agent_data)
         malfunction_data: MalfunctionProcessData = env.malfunction_process_data
 
         msg_data_dict = {
@@ -217,12 +182,13 @@ class RailEnvPersister(object):
             "agents": agent_data,
             "malfunction": malfunction_data,
             "max_episode_steps": env._max_episode_steps,
-            }
+        }
         return msg_data_dict
 
 
 ################################################################################################
 # deprecated methods moved from RailEnv.  Most likely broken.
+
 
     def deprecated_get_full_state_msg(self) -> msgpack.Packer:
         """
@@ -247,13 +213,8 @@ class RailEnvPersister(object):
         grid_data = self.rail.grid.tolist()
         agent_data = [agent.to_agent() for agent in self.agents]
 
-        # I think these calls do nothing - they create packed data and it is discarded
-        #msgpack.packb(grid_data, use_bin_type=True)
-        #msgpack.packb(agent_data, use_bin_type=True)
-
         distance_map_data = self.distance_map.get()
         malfunction_data: MalfunctionProcessData = self.malfunction_process_data
-        #msgpack.packb(distance_map_data, use_bin_type=True)  # does nothing
         msg_data = {
             "grid": grid_data,
             "agents": agent_data,
