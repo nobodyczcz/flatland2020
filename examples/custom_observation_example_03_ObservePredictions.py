@@ -36,7 +36,7 @@ class ObservePredictions(ObservationBuilder):
     def get_many(self, handles: Optional[List[int]] = None) -> Dict[int, np.ndarray]:
         '''
         Because we do not want to call the predictor seperately for every agent we implement the get_many function
-        Here we can call the predictor just ones for all the agents and use the predictions to generate our observations
+        Here we can call the predictor just once for all the agents and use the predictions to generate our observations
         :param handles:
         :return:
         '''
@@ -52,7 +52,7 @@ class ObservePredictions(ObservationBuilder):
             pos_list = []
             for a in handles:
                 pos_list.append(self.predictions[a][t][1:3])
-            # We transform (x,y) coodrinates to a single integer number for simpler comparison
+            # We transform (x,y) coordinates to a single integer number for simpler comparison
             self.predicted_pos.update({t: coordinate_to_position(self.env.width, pos_list)})
 
         observations = super().get_many(handles)
@@ -65,12 +65,12 @@ class ObservePredictions(ObservationBuilder):
         overlaps with other predicted paths at any time. This is useless for the task of navigation but might
         help when looking for conflicts. A more complex implementation can be found in the TreeObsForRailEnv class
 
-        Each agent recieves an observation of length 10, where each element represents a prediction step and its value
+        Each agent receives an observation of length 10, where each element represents a prediction step and its value
         is:
          - 0 if no overlap is happening
          - 1 where n i the number of other paths crossing the predicted cell
 
-        :param handle: handeled as an index of an agent
+        :param handle: handled as an index of an agent
         :return: Observation of handle
         '''
 
