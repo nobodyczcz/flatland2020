@@ -11,7 +11,6 @@ image: themattrix/tox
 
 stages:
     - tests
-    - integration_testing
     - profiling
     - benchmarks
     - deploy_docs
@@ -132,17 +131,4 @@ benchmarks:
         - conda install -c conda-forge tox-conda
     script:
         - xvfb-run tox -e benchmarks -v --recreate
-
-test_conda_setup:
-    stage: integration_testing
-    before_script:
-        - apt update
-        - apt install -y libgl1-mesa-glx xvfb xdg-utils libcairo2-dev libjpeg-dev libgif-dev graphviz libgraphviz-dev python-pyglet
-        - wget -nv https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/Miniconda3-latest-Linux-x86_64.sh
-        - bash /tmp/Miniconda3-latest-Linux-x86_64.sh -b -p /tmp/miniconda3
-        - export PATH=/tmp/miniconda3/bin:$PATH
-        - conda update -n root conda -y
-    script:
-        - xvfb-run bash getting_started/getting_started.sh
-
 
