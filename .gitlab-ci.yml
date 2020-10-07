@@ -15,9 +15,6 @@ stages:
     - profiling
     - benchmarks
     - deploy_docs
-cache:
-    paths:
-        - .tox
 
 before_script:
     - echo "Setting Up...."
