@@ -11,6 +11,7 @@ image: themattrix/tox
 
 stages:
     - tests
+    - integration_testing
     - profiling
     - benchmarks
     - deploy_docs
