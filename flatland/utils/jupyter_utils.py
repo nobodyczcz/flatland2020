@@ -14,7 +14,7 @@ from flatland.envs.rail_env import RailEnv, RailEnvActions
 
 from flatland.envs.persistence import RailEnvPersister
 from flatland.utils.rendertools import RenderTool
-from flatland.utils import env_edit_utils as eeu
+#from flatland.utils import env_edit_utils as eeu
 from typing import List, NamedTuple
 
 class Behaviour():
@@ -106,15 +106,20 @@ class Deterministic(Behaviour):
 
 class EnvCanvas():
 
-    def __init__(self, env, behaviour:Behaviour=None):
+    def __init__(self, env, behaviour:Behaviour=None, size=(600,300)):
+        self.size = size
+        self.oCan = canvas.Canvas(size=size)
+        self.setEnv(env, behaviour)
+
+    def setEnv(self, env, behaviour:Behaviour=None):
         self.env = env
         self.iStep = 0
         if behaviour is None:
             behaviour = AlwaysForward(env)
         self.behaviour = behaviour
-        self.oRT = RenderTool(env, show_debug=True)
+        self.oRT = RenderTool(env, show_debug=True, 
+            screen_width=self.size[0], screen_height=self.size[1])
 
-        self.oCan = canvas.Canvas(size=(600,300))
         self.render()
 
     def render(self):
@@ -124,6 +129,7 @@ class EnvCanvas():
     def step(self):
         dAction = self.behaviour.getActions()
         self.env.step(dAction)
+        return dAction
 
     def show(self):
         self.render()
