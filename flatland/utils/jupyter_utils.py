@@ -15,6 +15,7 @@ from flatland.envs.rail_env import RailEnv, RailEnvActions
 from flatland.envs.persistence import RailEnvPersister
 from flatland.utils.rendertools import RenderTool
 #from flatland.utils import env_edit_utils as eeu
+import flatland.evaluators.service2 as fes 
 from typing import List, NamedTuple
 
 class Behaviour():
@@ -100,16 +101,42 @@ class Deterministic(Behaviour):
         #print(iStep, dAg_Action[0])
         return dAg_Action
 
+class JuDisplay(fes.Display):
+    def __init__(self, envCanvas):
+        super().__init__()
+        self.envCanvas = envCanvas
+        self.action = None
+        self.shown = False
 
+    def set_env(self, env):
+        super().set_env(env)
+        self.envCanvas.setEnv(env)
+        if not self.shown:
+            self.envCanvas.show()
+            self.shown = True
+
+    def step(self, action):
+        self.action = action
+        self.envCanvas.render()
+
+
+class RedisBehaviour(Behaviour):
+    def __init__(self, env, oSrv):
+        super().__init__(env)
+        self.oSrv = oSrv
+
+    def getActions(self):
+        pass
 
 
 
 class EnvCanvas():
 
-    def __init__(self, env, behaviour:Behaviour=None, size=(600,300)):
+    def __init__(self, env=None, behaviour:Behaviour=None, size=(600,300)):
         self.size = size
         self.oCan = canvas.Canvas(size=size)
-        self.setEnv(env, behaviour)
+        if env is not None:
+            self.setEnv(env, behaviour)
 
     def setEnv(self, env, behaviour:Behaviour=None):
         self.env = env
@@ -125,6 +152,9 @@ class EnvCanvas():
     def render(self):
         self.oRT.render_env(show_rowcols=True,  show_inactive_agents=False, show_observations=False)
         self.oCan.put_image_data(self.oRT.get_image())
+
+    def get_image(self):
+        return self.oRT.get_image()
 
     def step(self):
         dAction = self.behaviour.getActions()

@@ -91,6 +91,18 @@ SUPPORTED_CLIENT_VERSIONS = \
     ]
 
 
+class Display:
+    def __init__(self):
+        pass
+
+    def set_env(self, env):
+        self.env=env
+
+    def step(self):
+        pass
+
+
+
 class FlatlandRemoteEvaluationService:
     """
     A remote evaluation service which exposes the following interfaces
@@ -131,7 +143,8 @@ class FlatlandRemoteEvaluationService:
         shuffle=False,
         missing_only=False,
         result_output_path=None,
-        disable_timeouts=False
+        disable_timeouts=False,
+        display:Display = None
     ):
 
         # Episode recording properties
@@ -147,6 +160,7 @@ class FlatlandRemoteEvaluationService:
         self.use_pickle = use_pickle
         self.missing_only = missing_only
         self.episode_actions = []
+        self.display = display
 
         self.disable_timeouts = disable_timeouts
         if self.disable_timeouts:
@@ -259,6 +273,8 @@ class FlatlandRemoteEvaluationService:
                 ))
                 shutil.rmtree(self.vizualization_folder_name)
             os.mkdir(self.vizualization_folder_name)
+        
+        
 
     def update_running_stats(self, key, scalar):
         """
@@ -719,6 +735,9 @@ class FlatlandRemoteEvaluationService:
 
             self.env, _env_dict = RailEnvPersister.load_new(test_env_file_path)
 
+            if self.display is not None:
+                self.display.set_env(self.env)
+
             self.begin_simulation = time.time()
 
             # Update evaluation metadata for the previous episode
@@ -871,6 +890,9 @@ class FlatlandRemoteEvaluationService:
         # record the actions before checking for done
         if self.action_dir is not None:
             self.episode_actions.append(action)
+
+        if self.display is not None:
+            self.display.step(action)
 
         # Is the episode over?
         if done["__all__"]:
@@ -1175,7 +1197,7 @@ class FlatlandRemoteEvaluationService:
             payload=payload
         )
 
-    def run(self):
+    def run(self, exit_on_submit=False):
         """
         Main runner function which waits for commands from the client
         and acts accordingly.
@@ -1277,6 +1299,8 @@ class FlatlandRemoteEvaluationService:
 
                     print("Overall Message Queue Latency : ", np.array(MESSAGE_QUEUE_LATENCY).mean())
                     self.handle_env_submit(command)
+                    if exit_on_submit:
+                        return
 
                 else:
                     _error = self._error_template(
