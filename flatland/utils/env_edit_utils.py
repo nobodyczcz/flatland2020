@@ -72,6 +72,18 @@ def makeEnv2(nAg=2, shape=(20,10), llrcPaths=[], lrcStarts=[], lrcTargs=[], liDi
 
 
 ddEnvSpecs = {
+
+        "single_line":{
+            "llrcPaths":  [
+                [(1,0), (1,15)],  # across the top
+                #[(1,4), (1,6), (3,6), (3, 12), (1,12), (1,14)], # alternative loop below
+                ],
+            "lrcStarts": [ (1,3), (1,14) ],
+            "lrcTargs" : [(1,14), (1,3)],
+            "liDirs" : [1,3]
+            },
+
+
         # opposing stations with single alternative path
         "single_alternative":{
             "llrcPaths":  [
@@ -81,6 +93,17 @@ ddEnvSpecs = {
             "lrcStarts": [ (1,3), (1,14) ],
             "lrcTargs" : [(1,14), (1,3)],
             "liDirs" : [1,3]
+            },
+
+        # opposing stations with single alternative path
+        "alternative_needs_pause":{
+            "llrcPaths":  [
+                [(1,0), (1,18), (7,18)],  # across the top
+                [(1,2), (1,4), (3,4), (3, 8), (1,8), (1,12)], # alternative loop below
+                ],
+            "lrcStarts": [ (1,2), (6,18) ],
+            "lrcTargs" : [(6,18), (1,2)],
+            "liDirs" : [1,0]
             },
 
         # single spur so one agent needs to wait

@@ -4,19 +4,20 @@ import PIL
 from IPython import display
 from ipycanvas import canvas
 import time
-
+from numpy.random import RandomState
 from flatland.envs import malfunction_generators as malgen
 from flatland.envs.agent_utils import EnvAgent
 #from flatland.envs import sparse_rail_gen as spgen
 from flatland.envs import rail_generators as rail_gen
 from flatland.envs import agent_chains as ac
 from flatland.envs.rail_env import RailEnv, RailEnvActions
+import flatland.envs.malfunction_generators as mfg
 
 from flatland.envs.persistence import RailEnvPersister
 from flatland.utils.rendertools import RenderTool
 #from flatland.utils import env_edit_utils as eeu
 import flatland.evaluators.service2 as fes 
-from typing import List, NamedTuple
+from typing import List, NamedTuple, Optional, Dict
 
 class Behaviour():
     def __init__(self, env):
@@ -47,8 +48,35 @@ AgentPause = NamedTuple("AgentPause",
         ("iPauseFor", int)
     ])
 
+
+class DeterministicMalfunctionGen:
+    def __init__(self, env, lAP:List[AgentPause]):
+        self.env:RailEnv = env
+        self.lAP:List[AgentPause] = lAP
+
+    def generate(self,
+        agent:EnvAgent=None,
+        np_random:RandomState=None,
+        reset=False) -> Optional[mfg.Malfunction]:
+
+        if reset:
+            return mfg.Malfunction(0)
+
+        # find this agent in the env's list - bit risky
+        iAg = self.env.agents.index(agent)
+
+        if agent.malfunction_data["malfunction"] < 1:
+            for oAP in self.lAP:
+                if (oAP.iPauseAt == self.env._elapsed_steps) and (oAP.iAg == iAg):
+                    return mfg.Malfunction(oAP.iPauseFor)
+        
+        return mfg.Malfunction(0)
+
 class ForwardWithPause(Behaviour):
     def __init__(self, env, lPauses:List[AgentPause]):
+        """ An agent with a list of pauses
+        """
+
         self.env = env
         self.nAg = len(env.agents)
         self.lPauses = lPauses

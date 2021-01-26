@@ -128,7 +128,7 @@ class RenderLocal(RenderBase):
         The lower / rail layer 0 is only redrawn after set_new_rail() has been called.
         Created with a "GraphicsLayer" or gl - now either PIL or PILSVG
     """
-    visit = recordtype("visit", ["rc", "iDir", "iDepth", "prev"])
+    #visit = recordtype("visit", ["rc", "iDir", "iDepth", "prev"])
 
     color_list = list("brgcmyk")
     # \delta RC for NESW
