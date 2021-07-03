@@ -3,7 +3,8 @@ import time
 from collections import deque
 
 import ipywidgets
-import jpy_canvas
+#import jpy_canvas
+import ipycanvas
 import numpy as np
 from ipywidgets import IntSlider, VBox, HBox, Checkbox, Output, Text, RadioButtons, Tab
 from numpy import array
@@ -46,34 +47,39 @@ class View(object):
         self.xyScreen = (screen_width, screen_height)
 
     def display(self):
-        self.output_generator.clear_output()
+        self.wOutput.clear_output()
         return self.wMain
 
     def init_canvas(self):
         # update the rendertool with the env
         self.new_env()
         self.oRT.render_env(show=False)
-        img = self.oRT.get_image()
-        self.wImage = jpy_canvas.Canvas(img)
-        self.yxSize = self.wImage.data.shape[:2]
-        self.writableData = np.copy(self.wImage.data)  # writable copy of image - wid_img.data is somehow readonly
-        self.wImage.register_move(self.controller.on_mouse_move)
-        self.wImage.register_click(self.controller.on_click)
+        self.g3img = self.oRT.get_image()
+        #self.wImage = jpy_canvas.Canvas(img)
+        self.wCan = ipycanvas.Canvas(width=400, height=300)
+        self.wCan.put_image_data(self.g3img, 0, 0)
+        #self.yxSize = self.wImage.data.shape[:2]
+        self.yxSize = self.g3img.shape[:2]
+        #self.writableData = np.copy(self.wImage.data)  # writable copy of image - wid_img.data is somehow readonly
+        #self.wImage.register_move(self.controller.on_mouse_move)
+        #self.wImage.register_click(self.controller.on_click)
+
+        self.oAdaptor = MouseAdaptor(self.wCan, self.controller)
 
         self.yxBase = self.oRT.gl.yxBase
         self.nPixCell = self.oRT.gl.nPixCell
 
     def init_widgets(self):
         # Debug checkbox - enable logging in the Output widget
-        self.debug = ipywidgets.Checkbox(description="Debug")
-        self.debug.observe(self.controller.set_debug, names="value")
+        self.wDebug = ipywidgets.Checkbox(description="Debug")
+        self.wDebug.observe(self.controller.set_debug, names="value")
 
         # Separate checkbox for mouse move events - they are very verbose
-        self.debug_move = Checkbox(description="Debug mouse move")
-        self.debug_move.observe(self.controller.set_debug_move, names="value")
+        self.wDebug_move = Checkbox(description="Debug mouse move")
+        self.wDebug_move.observe(self.controller.set_debug_move, names="value")
 
-        # This is like a cell widget where loggin goes
-        self.output_generator = Output()
+        # This is like a cell widget where logging goes
+        self.wOutput = Output()
 
         # Filename textbox
         self.filename = Text(description="Filename")
@@ -132,7 +138,7 @@ class View(object):
             *self.lwButtons,
             self.wTab])
 
-        self.wMain = HBox([self.wImage, self.wVbox_controls])
+        self.wMain = HBox([self.wCan, self.wVbox_controls])
 
     def draw_stroke(self):
         pass
@@ -144,7 +150,8 @@ class View(object):
             screen_height=self.xyScreen[1], screen_width=self.xyScreen[0])
 
     def redraw(self):
-        with self.output_generator:
+        with self.wOutput:
+            self.debug("redraw")
             self.oRT.set_new_rail()
             self.model.env.reset_agents()
             for a in self.model.env.agents:
@@ -159,19 +166,21 @@ class View(object):
                                 selected_agent=self.model.selected_agent,
                                 show_observations=False,
                                 )
-            img = self.oRT.get_image()
+            self.g3img = self.oRT.get_image()
 
-            self.wImage.data = img
-            self.writableData = np.copy(self.wImage.data)
+            self.wCan.put_image_data(self.g3img)
+            #self.writableData = np.copy(self.wCan.data)
 
             # the size should only be updated on regenerate at most
-            self.yxSize = self.wImage.data.shape[:2]
-            return img
+            self.yxSize = self.g3img.shape[:2] # self.wCan.data.shape[:2]
+            return self.g3img
 
     def redisplay_image(self):
-        if self.writableData is not None:
+        print("redisplay")
+        if self.wCan is not None:
             # This updates the image in the browser to be the new edited version
-            self.wImage.data = self.writableData
+            #self.wImage.data = self.writableData
+            self.wCan.put_image_data(self.g3img)
 
     def drag_path_element(self, x, y):
         # Draw a black square on the in-memory copy of the image
@@ -189,11 +198,56 @@ class View(object):
         return tuple(rc_cell)
 
     def log(self, *args, **kwargs):
-        if self.output_generator:
-            with self.output_generator:
+        if self.wOutput:
+            with self.wOutput:
                 print(*args, **kwargs)
         else:
             print(*args, **kwargs)
+
+    def debug(self,  *args, **kwargs):
+        if self.wDebug:
+            self.log(*args, *kwargs)
+
+
+class MouseAdaptor:
+    def __init__(self, wCan, oController):
+        self.wCan = wCan
+        self.oController = oController
+        oController.debug("mouseadaptor")
+        
+        self.down = False
+
+        self.wCan.on_mouse_move(self.on_mouse_move)
+        self.wCan.on_mouse_down(self.on_mouse_down)
+        self.wCan.on_mouse_up(self.on_mouse_up)
+        self.wCan.on_mouse_out(self.on_mouse_out)
+
+
+    def on_mouse_down(self, x, y):
+        """ record the down; we will later decide if it's a click or a drag
+        """
+        
+        self.xyDownPos = (int(x),int(y))
+        self.down=True
+        self.oController.debug(f"mouse down {self.xyDownPos}")
+
+    def on_mouse_up(self, x, y):
+        xyPos = (int(x), int(y))
+        self.down = False
+        self.oController.debug(f"mouse up {xyPos}")
+        if xyPos == self.xyDownPos:
+            self.oController.debug(f"click {xyPos}")
+        else:
+            self.oController.debug(f"not click - {xyPos} {self.xyDownPos}")
+
+    def on_mouse_move(self, x, y):
+        self.xyPos = (int(x), int(y))
+        if self.down and (self.xyPos != self.xyDownPos):
+            self.oController.debug(f"move {self.xyPos}")
+
+    def on_mouse_out(self, x, y):
+        self.down = False
+        self.oController.debug(f"out {x} {y}")
 
 
 class Controller(object):
@@ -213,7 +267,10 @@ class Controller(object):
     def set_model(self, model):
         self.model = model
 
-    def on_click(self, wid, event):
+    def on_click(self, x, y):
+        self.debug(f"click {x} {y}")
+
+    def old_on_click(self, wid, event):
         x = event['canvasX']
         y = event['canvasY']
         self.debug("debug:", x, y)
@@ -251,7 +308,11 @@ class Controller(object):
     def set_filename(self, event):
         self.model.set_filename(event["new"])
 
-    def on_mouse_move(self, wid, event):
+    def on_mouse_move(self, x, y):
+        #self.debug(f"move {x} {y} ")
+        pass
+
+    def old_on_mouse_move(self, wid, event):
         """Mouse motion event handler for drawing.
         """
 
