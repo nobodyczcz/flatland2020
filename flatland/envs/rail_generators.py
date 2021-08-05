@@ -339,7 +339,7 @@ def rail_from_file_with_cities(filename, load_from_package=None) -> RailGenerato
     def generator(width: int, height: int, num_agents: int, num_resets: int = 0,
                   np_random: RandomState = None) -> List:
 
-        rail_env_transitions = RailEnvTransitions
+        rail_env_transitions = RailEnvTransitions()
         with open(filename, "rb") as file_in:
             load_data = file_in.read()
 
