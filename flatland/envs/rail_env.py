@@ -146,7 +146,8 @@ class RailEnv(Environment):
                  remove_agents_at_target=True,
                  random_seed=1,
                  record_steps=False,
-                 close_following=True
+                 close_following=True,
+                 timetable_config={}
                  ):
         """
         Environment init.
@@ -254,6 +255,8 @@ class RailEnv(Environment):
 
         self.close_following = close_following  # use close following logic
         self.motionCheck = ac.MotionCheck()
+
+        self.timetable_config = timetable_config
 
     def _seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
@@ -370,7 +373,7 @@ class RailEnv(Environment):
 
             # NEW : Time Schedule Generation
             timetable = timetable_generator(self.agents, self.distance_map, 
-                                               agents_hints, self.np_random)
+                                               agents_hints, self.np_random, self.timetable_config)
 
             self._max_episode_steps = timetable.max_episode_steps
 

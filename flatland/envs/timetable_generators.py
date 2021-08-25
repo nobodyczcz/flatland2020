@@ -19,7 +19,8 @@ def len_handle_none(v):
         return 0
 
 def timetable_generator(agents: List[EnvAgent], distance_map: DistanceMap, 
-                            agents_hints: dict, np_random: RandomState = None) -> Timetable:
+                            agents_hints: dict, np_random: RandomState = None,
+                            timetable_config: dict={}) -> Timetable:
     """
     Calculates earliest departure and latest arrival times for the agents
     This is the new addition in Flatland 3
@@ -40,18 +41,18 @@ def timetable_generator(agents: List[EnvAgent], distance_map: DistanceMap,
     else:
         num_cities = 2
 
-    timedelay_factor = 4
-    alpha = 2
+    timedelay_factor = timetable_config.get("timedelay_factor", 4)
+    alpha = timetable_config.get("max_episodes_alpha", 2)
     max_episode_steps = int(timedelay_factor * alpha * \
         (distance_map.rail.width + distance_map.rail.height + (len(agents) / num_cities)))
     
     # Multipliers
     old_max_episode_steps_multiplier = 3.0
-    new_max_episode_steps_multiplier = 1.5
-    travel_buffer_multiplier = 1.3 # must be strictly lesser than new_max_episode_steps_multiplier
+    new_max_episode_steps_multiplier = timetable_config.get("max_episode_steps_multiplier", 1.5)
+    travel_buffer_multiplier = timetable_config.get("travel_buffer_multiplier", 1.3) # must be strictly lesser than new_max_episode_steps_multiplier
     assert new_max_episode_steps_multiplier > travel_buffer_multiplier
-    end_buffer_multiplier = 0.05
-    mean_shortest_path_multiplier = 0.2
+    end_buffer_multiplier = timetable_config.get("end_buffer_multiplier", 0.05)
+    mean_shortest_path_multiplier = timetable_config.get("mean_shortest_path_multiplier", 0.2)
     
     shortest_paths = get_shortest_paths(distance_map)
     shortest_paths_lengths = [len_handle_none(v) for k,v in shortest_paths.items()]
